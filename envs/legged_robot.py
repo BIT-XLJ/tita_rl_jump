@@ -38,7 +38,7 @@ class LeggedRobot(BaseTask):
         self.cfg = cfg
         self.sim_params = sim_params
         self.height_samples = None
-        self.debug_viz = False
+        self.debug_viz = True
         self.init_done = False
     
         self._parse_cfg(self.cfg)
@@ -449,6 +449,7 @@ class LeggedRobot(BaseTask):
 
         if self.viewer and self.enable_viewer_sync and self.debug_viz:
             self._draw_debug_vis()
+            self._draw_goals()
 
     #------------- Cameras --------------
     def attach_camera(self, i, env_handle, actor_handle):
@@ -799,8 +800,8 @@ class LeggedRobot(BaseTask):
         if self.custom_origins:
             self.root_states[env_ids] = self.base_init_state
             self.root_states[env_ids, :3] += self.env_origins[env_ids]
-            self.root_states[env_ids, 0] -= 0.8
-            self.root_states[env_ids, 1] += 1.0
+            self.root_states[env_ids, 0] -= 5.0
+            self.root_states[env_ids, 1] += 0.0
             # self.root_states[env_ids, :2] += torch_rand_float(-1., 1., (len(env_ids), 2), device=self.device) # xy position within 1m of the center
         else:
             self.root_states[env_ids] = self.base_init_state
@@ -973,6 +974,7 @@ class LeggedRobot(BaseTask):
             self.max_terrain_level = self.cfg.terrain.num_rows
             self.terrain_origins = torch.from_numpy(self.terrain.env_origins).to(self.device).to(torch.float)
             self.env_origins[:] = self.terrain_origins[self.terrain_levels, self.terrain_types]
+            self.terrain_goals = torch.from_numpy(self.terrain.goals).to(self.device).to(torch.float)
         else:
             self.custom_origins = False
             self.env_origins = torch.zeros(self.num_envs, 3, device=self.device, requires_grad=False)
@@ -1026,6 +1028,21 @@ class LeggedRobot(BaseTask):
             cv2.namedWindow(window_name, cv2.WINDOW_NORMAL)
             cv2.imshow("Depth Image", self.depth_buffer[self.lookat_id, -1].cup().numpy() + 0.5)
             cv2.waitKey(1) 
+
+    def _draw_goals(self):
+        sphere_geom = gymutil.WireframeSphereGeometry(0.1, 32, 32, None, color=(1, 0, 0))
+        sphere_geom_cur = gymutil.WireframeSphereGeometry(0.1, 32, 32, None, color=(0, 0, 1))
+        # sphere_geom_reached = gymutil.WireframeSphereGeometry(self.cfg.env.next_goal_threshold, 32, 32, None, color=(0, 1, 0))
+        goals = self.terrain_goals[self.terrain_levels[self.lookat_id], self.terrain_types[self.lookat_id]].cpu().numpy()
+        for i, goal in enumerate(goals):
+            goal_xy = goal[:2] + self.terrain.cfg.border_size
+            pts = (goal_xy/self.terrain.cfg.horizontal_scale).astype(int)
+            # goal_z = self.height_samples[pts[0], pts[1]].cpu().item() * self.terrain.cfg.vertical_scale
+            pose = gymapi.Transform(gymapi.Vec3(goal[0], goal[1], goal[2]), r=None)
+            # if i == self.cur_goal_idx[self.lookat_id].cpu().item():
+            #     gymutil.draw_lines(sphere_geom_cur, self.gym, self.viewer, self.envs[self.lookat_id], pose)
+            # else:
+            gymutil.draw_lines(sphere_geom, self.gym, self.viewer, self.envs[self.lookat_id], pose)
 
     def _init_height_points(self):
         """ Returns points at which the height measurments are sampled (in base frame)
@@ -1123,7 +1140,7 @@ class LeggedRobot(BaseTask):
             return
         distance = torch.norm(self.root_states[env_ids, :2] - self.env_origins[env_ids, :2], dim=1)
         # robots that walked far enough progress to harder terains
-        move_up = distance > self.terrain.env_length / 2
+        move_up = (distance > self.terrain.env_length / 2) * (self.root_states[env_ids, 0] > self.env_origins[env_ids, 0])
         # robots that walked less than half of their required distance go to simpler terrains
         move_down = (distance < torch.norm(self.commands[env_ids, :2], dim=1)*self.max_episode_length_s*0.5) * ~move_up
         self.terrain_levels[env_ids] += 1 * move_up - 1 * move_down

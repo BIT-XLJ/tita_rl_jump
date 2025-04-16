@@ -18,7 +18,7 @@ class Terrain:
 
         self.cfg.num_sub_terrains = cfg.num_rows * cfg.num_cols
         self.env_origins = np.zeros((cfg.num_rows, cfg.num_cols, 3))
-
+        
         self.width_per_env_pixels = int(self.env_width / cfg.horizontal_scale)
         self.length_per_env_pixels = int(self.env_length / cfg.horizontal_scale)
 
@@ -40,7 +40,9 @@ class Terrain:
                                                                                          self.cfg.horizontal_scale,
                                                                                          self.cfg.vertical_scale,
                                                                                          self.cfg.slope_treshold)
-
+        self.goals = np.zeros((cfg.num_rows, cfg.num_cols, cfg.num_goals, 3))
+        self.goals[...,:] = [self.env_width/2, self.env_length/2, 0.4]
+        
     def randomized_terrain(self):
         for k in range(self.cfg.num_sub_terrains):
             # Env coordinates in the world
@@ -114,10 +116,9 @@ class Terrain:
         #     gap_terrain(terrain, gap_size=gap_size, platform_size=3.)
         # else:
         #     pit_terrain(terrain, depth=pit_depth, platform_size=4.)
-
-        if choice < 0.5:
-            terrain_utils.discrete_step_terrain(terrain, 0.4, 2,
-                                                         3, 1, platform_size=3.)
+        
+        # if choice < 0.5:
+        terrain_utils.discrete_step_terrain(terrain, 0.4, 2, 3, 1, platform_size=3.)    
         # terrain_utils.pyramid_stairs_terrain(terrain, step_width=0.61, step_height=0.4,
         #                                             platform_size=1.)
         
