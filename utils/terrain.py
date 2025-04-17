@@ -118,7 +118,7 @@ class Terrain:
         #     pit_terrain(terrain, depth=pit_depth, platform_size=4.)
         
         # if choice < 0.5:
-        terrain_utils.discrete_step_terrain(terrain, 0.4, 2, 3, 1, platform_size=3.)    
+        terrain_utils.discrete_step_terrain(terrain, self.cfg.step_height, 2, 3, 1, platform_size=self.cfg.platform_size)    
         # terrain_utils.pyramid_stairs_terrain(terrain, step_width=0.61, step_height=0.4,
         #                                             platform_size=1.)
         

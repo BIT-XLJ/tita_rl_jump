@@ -78,11 +78,15 @@ class LeggedRobotCfg(BaseConfig):
         # trimesh only:
         slope_treshold = 0.75  # slopes above this threshold will be corrected to vertical surfaces
         num_goals = 1
+        platform_size = 3.0  # [m]
+        reach_goal_threshold = 0.1  # [m]
+        step_height = 0.4  # [m]
+        jump_threshold = 0.25 # [m],距离高台jump_threshold开始跳跃
 
     class commands:
         curriculum = False
         max_curriculum = 1.
-        num_commands = 4  # default: lin_vel_x, lin_vel_y, ang_vel_yaw, heading (in heading mode ang_vel_yaw is recomputed from heading error)
+        num_commands = 5  # default: lin_vel_x, lin_vel_y, ang_vel_yaw, heading ,jump binary(in heading mode ang_vel_yaw is recomputed from heading error)
         resampling_time = 10.  # time before command are changed[s]
         heading_command = True  # if true: compute ang vel command from heading error
         global_reference = False

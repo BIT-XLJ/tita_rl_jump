@@ -533,6 +533,7 @@ class LeggedRobot(BaseTask):
         """
         env_ids = (self.episode_length_buf % int(self.cfg.commands.resampling_time / self.dt)==0).nonzero(as_tuple=False).flatten()
         self._resample_commands(env_ids)
+        self._update_jump_cmd()
 
         if self.cfg.commands.heading_command:
             forward = quat_apply(self.base_quat, self.forward_vec)
@@ -696,8 +697,10 @@ class LeggedRobot(BaseTask):
         self.reset_buf = torch.any(torch.norm(self.contact_forces[:, self.termination_contact_indices, :], dim=-1) > 1.,
                                    dim=1)
         self.time_out_buf = self.episode_length_buf > self.max_episode_length  # no terminal reward for time-outs
+        self.reach_goal_buf = torch.norm(self.root_states[:, :2] - self.env_origins[:,:2], dim=-1) < self.cfg.terrain.reach_goal_threshold
         self.reset_buf |= self.time_out_buf
-
+        self.reset_buf |= self.reach_goal_buf
+        
     def compute_reward(self):
         """ Compute rewards
             Calls each reward function which had a non-zero scale (processed in self._prepare_reward_function())
@@ -748,6 +751,7 @@ class LeggedRobot(BaseTask):
         self._reset_dofs(env_ids)
         self._reset_root_states(env_ids)
         self._resample_commands(env_ids)
+        self._update_jump_cmd()
 
         # reset buffers
         self.last_actions[env_ids] = 0.
@@ -1033,7 +1037,8 @@ class LeggedRobot(BaseTask):
         sphere_geom = gymutil.WireframeSphereGeometry(0.1, 32, 32, None, color=(1, 0, 0))
         sphere_geom_cur = gymutil.WireframeSphereGeometry(0.1, 32, 32, None, color=(0, 0, 1))
         # sphere_geom_reached = gymutil.WireframeSphereGeometry(self.cfg.env.next_goal_threshold, 32, 32, None, color=(0, 1, 0))
-        goals = self.terrain_goals[self.terrain_levels[self.lookat_id], self.terrain_types[self.lookat_id]].cpu().numpy()
+        # goals = self.terrain_goals[self.terrain_levels[self.lookat_id], self.terrain_types[self.lookat_id]].cpu().numpy()
+        goals = self.env_origins.cpu().numpy()
         for i, goal in enumerate(goals):
             goal_xy = goal[:2] + self.terrain.cfg.border_size
             pts = (goal_xy/self.terrain.cfg.horizontal_scale).astype(int)
@@ -1127,6 +1132,13 @@ class LeggedRobot(BaseTask):
 
         # set small commands to zero
         self.commands[env_ids, :2] *= (torch.norm(self.commands[env_ids, :2], dim=1) > 0.2).unsqueeze(1)
+
+    def _update_jump_cmd(self):
+         
+        #  self.commands[:, 4] = False
+         envs_ids = torch.norm(self.env_origins[:,:2] - self.root_states[:, :2], dim=1) < self.cfg.terrain.platform_size + self.cfg.terrain.jump_threshold
+         self.commands[:, 4] = envs_ids
+
     
     def _update_terrain_curriculum(self, env_ids):
         """ Implements the game-inspired curriculum.
@@ -1162,6 +1174,21 @@ class LeggedRobot(BaseTask):
             self.command_ranges["lin_vel_x"][1] = np.clip(self.command_ranges["lin_vel_x"][1] + 0.5, 0., self.cfg.commands.max_curriculum)
 
     #------------ reward functions----------------
+    def _reward_tracking_goal_vel(self):   #移植自extreme parkour
+        self.target_pos_rel = self.env_origins[:,:2] - self.root_states[:, :2] 
+        norm = torch.norm(self.target_pos_rel, dim=-1, keepdim=True)
+        target_vec_norm = self.target_pos_rel / (norm + 1e-5)
+        cur_vel = self.root_states[:, 7:9]
+        rew = torch.minimum(torch.sum(target_vec_norm * cur_vel, dim=-1), self.commands[:, 0]) / (self.commands[:, 0] + 1e-5)
+        return rew
+    
+    def _reward_jump_height(self):
+        # Reward the robot for jumping high
+        self.target_jump_height = self.cfg.terrain.step_height + self.cfg.rewards.base_height_target
+        envs_id = torch.nonzero(self.commands[:, 4]).flatten()
+        return torch.sum(torch.square(self.root_states[envs_id,2] - self.target_jump_height), dim=1)
+        
+        
     def _reward_lin_vel_z(self):
         # Penalize z axis base linear velocity
         return torch.square(self.base_lin_vel[:, 2])
