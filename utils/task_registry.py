@@ -122,6 +122,7 @@ class TaskRegistry():
                             physics_engine=args.physics_engine,
                             sim_device=args.sim_device,
                             headless=args.headless)
+        self.env_cfg_for_wandb = env_cfg
         return env, env_cfg
 
     def make_alg_runner(self, env, name=None, args=None, train_cfg=None, log_root="default") -> Tuple[OnConstraintPolicyRunner, LeggedRobotCfgPPO]:
@@ -167,11 +168,13 @@ class TaskRegistry():
             self.log_dir = os.path.join(log_root, datetime.now().strftime('%b%d_%H-%M-%S') + '_' + train_cfg.runner.run_name)
 
         train_cfg_dict = class_to_dict(train_cfg)
+        env_cfg_dict = class_to_dict(self.env_cfg_for_wandb)
+        all_cfg = {**train_cfg_dict, **env_cfg_dict}
         if train_cfg.runner.runner_class_name == "OnPolicyRunner":
-            runner = OnPolicyRunner(env, train_cfg_dict, self.log_dir, device=args.rl_device)
+            runner = OnPolicyRunner(env, all_cfg, self.log_dir, device=args.rl_device)
         else:
             runner_class = eval(train_cfg.runner.runner_class_name)
-            runner = runner_class(env, train_cfg_dict, self.log_dir, device=args.rl_device)
+            runner = runner_class(env, all_cfg, self.log_dir, device=args.rl_device)
         #save resume path before creating a new log_dir
         resume = train_cfg.runner.resume
         if train_cfg.runner.runner_class_name == "OnPolicyRunner":

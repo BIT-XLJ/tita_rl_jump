@@ -3,7 +3,7 @@ import os
 from collections import deque
 import statistics
 import warnings
-
+import wandb
 from torch.utils.tensorboard import SummaryWriter
 import torch
 from global_config import ROOT_DIR
@@ -14,7 +14,7 @@ from envs.vec_env import VecEnv
 from modules.depth_backbone import DepthOnlyFCBackbone58x87, RecurrentDepthBackbone
 from utils.helpers import hard_phase_schedualer, partial_checkpoint_load
 from copy import copy, deepcopy
-
+from datetime import datetime
 class OnConstraintPolicyRunner:
 
     def __init__(self,
@@ -29,7 +29,14 @@ class OnConstraintPolicyRunner:
         self.depth_encoder_cfg = train_cfg["depth_encoder"]
         self.device = device
         self.env = env
-
+        self.wandb_run_name = (
+            datetime.now().strftime("%b%d_%H-%M-%S")
+            + "_"
+            + train_cfg["runner"]["experiment_name"]
+            + "_"
+            + train_cfg["runner"]["run_name"]
+        )
+        self.all_cfg = train_cfg
         # self.phase1_end = self.cfg["phase1_end"] 
  
         actor_critic_class = eval(self.cfg["policy_class_name"])  # ActorCritic
@@ -92,6 +99,12 @@ class OnConstraintPolicyRunner:
     def learn(self, num_learning_iterations, init_at_random_ep_len=False):
         # initialize writer
         if self.log_dir is not None and self.writer is None:
+            wandb.init(
+                project="Tita_jumping",
+                sync_tensorboard=True,
+                name=self.wandb_run_name,
+                config=self.all_cfg,
+            )
             self.writer = SummaryWriter(log_dir=self.log_dir, flush_secs=10)
         if init_at_random_ep_len:
             self.env.episode_length_buf = torch.randint_like(self.env.episode_length_buf,

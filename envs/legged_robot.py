@@ -1136,7 +1136,7 @@ class LeggedRobot(BaseTask):
     def _update_jump_cmd(self):
          
         #  self.commands[:, 4] = False
-         envs_ids = torch.norm(self.env_origins[:,:2] - self.root_states[:, :2], dim=1) < self.cfg.terrain.platform_size + self.cfg.terrain.jump_threshold
+         envs_ids = torch.norm(self.env_origins[:,:2] - self.root_states[:, :2], dim=1) < self.cfg.terrain.platform_size/2 + self.cfg.terrain.jump_threshold
          self.commands[:, 4] = envs_ids
 
     
@@ -1185,8 +1185,11 @@ class LeggedRobot(BaseTask):
     def _reward_jump_height(self):
         # Reward the robot for jumping high
         self.target_jump_height = self.cfg.terrain.step_height + self.cfg.rewards.base_height_target
-        envs_id = torch.nonzero(self.commands[:, 4]).flatten()
-        return torch.sum(torch.square(self.root_states[envs_id,2] - self.target_jump_height), dim=1)
+        self.target_height = torch.zeros_like(self.root_states[:, 2])
+        mask = self.commands[:, 4] > 0.5  # 获取布尔掩码
+        self.target_height[mask] = self.target_jump_height  # True 时赋值
+        self.target_height[~mask] = self.cfg.rewards.base_height_target  # False 时赋值
+        return torch.square(self.root_states[:,2] - self.target_height[:])
         
         
     def _reward_lin_vel_z(self):
