@@ -21,6 +21,29 @@ from configs import LeggedRobotCfg
 from global_config import ROOT_DIR
 from utils.utils import random_quat
 
+def euler_from_quaternion(quat_angle):
+        """
+        Convert a quaternion into euler angles (roll, pitch, yaw)
+        roll is rotation around x in radians (counterclockwise)
+        pitch is rotation around y in radians (counterclockwise)
+        yaw is rotation around z in radians (counterclockwise)
+        """
+        x = quat_angle[:,0]; y = quat_angle[:,1]; z = quat_angle[:,2]; w = quat_angle[:,3]
+        t0 = +2.0 * (w * x + y * z)
+        t1 = +1.0 - 2.0 * (x * x + y * y)
+        roll_x = torch.atan2(t0, t1)
+     
+        t2 = +2.0 * (w * y - z * x)
+        t2 = torch.clip(t2, -1, 1)
+        pitch_y = torch.asin(t2)
+     
+        t3 = +2.0 * (w * z + x * y)
+        t4 = +1.0 - 2.0 * (y * y + z * z)
+        yaw_z = torch.atan2(t3, t4)
+     
+        return roll_x, pitch_y, yaw_z # in radians
+
+
 class LeggedRobot(BaseTask):
     def __init__(self, cfg: LeggedRobotCfg, sim_params, physics_engine, sim_device, headless):
         """ Parses the provided config file,
@@ -38,7 +61,7 @@ class LeggedRobot(BaseTask):
         self.cfg = cfg
         self.sim_params = sim_params
         self.height_samples = None
-        self.debug_viz = True
+        self.debug_viz = False
         self.init_done = False
     
         self._parse_cfg(self.cfg)
@@ -425,7 +448,7 @@ class LeggedRobot(BaseTask):
         self.base_ang_vel[:] = quat_rotate_inverse(self.base_quat, self.root_states[:, 10:13])
         self.projected_gravity[:] = quat_rotate_inverse(self.base_quat, self.gravity_vec)
 
-        #self.roll, self.pitch, self.yaw = euler_from_quaternion(self.base_quat)
+        self.roll, self.pitch, self.yaw = euler_from_quaternion(self.base_quat)
         contact = self.contact_forces[:, self.feet_indices, 2] > 1.
         self.contact_filt = torch.logical_or(contact, self.last_contacts) 
         self.last_contacts = contact
@@ -1127,6 +1150,10 @@ class LeggedRobot(BaseTask):
         self.commands[env_ids, 1] = torch_rand_float(self.command_ranges["lin_vel_y"][0], self.command_ranges["lin_vel_y"][1], (len(env_ids), 1), device=self.device).squeeze(1)
         if self.cfg.commands.heading_command:
             self.commands[env_ids, 3] = torch_rand_float(self.command_ranges["heading"][0], self.command_ranges["heading"][1], (len(env_ids), 1), device=self.device).squeeze(1)
+            self.target_pos_rel = self.env_origins[:, :2] - self.root_states[:, :2]
+            norm = torch.norm(self.target_pos_rel, dim=-1, keepdim=True)
+            target_vec_norm = self.target_pos_rel / (norm + 1e-5)
+            self.target_yaw = torch.atan2(target_vec_norm[:, 1], target_vec_norm[:, 0])
         else:
             self.commands[env_ids, 2] = torch_rand_float(self.command_ranges["ang_vel_yaw"][0], self.command_ranges["ang_vel_yaw"][1], (len(env_ids), 1), device=self.device).squeeze(1)
 
@@ -1136,7 +1163,7 @@ class LeggedRobot(BaseTask):
     def _update_jump_cmd(self):
          
         #  self.commands[:, 4] = False
-         envs_ids = torch.norm(self.env_origins[:,:2] - self.root_states[:, :2], dim=1) < self.cfg.terrain.platform_size/2 + self.cfg.terrain.jump_threshold
+         envs_ids = torch.norm(self.env_origins[:,:2] - self.root_states[:, :2], dim=1) < self.cfg.terrain.platform_size/2 + self.cfg.terrain.jump_threshold * (0.5 + 0.5 * torch.rand(1)).item()
          self.commands[:, 4] = envs_ids
 
     
@@ -1182,6 +1209,12 @@ class LeggedRobot(BaseTask):
         rew = torch.minimum(torch.sum(target_vec_norm * cur_vel, dim=-1), self.commands[:, 0]) / (self.commands[:, 0] + 1e-5)
         return rew
     
+    def _reward_close_target(self):
+        # Reward the robot for getting close to the target
+        distance = torch.norm(self.root_states[:, :2] - self.env_origins[:,:2], dim=1)
+        rew = torch.exp(-torch.abs(distance))
+        return rew
+
     def _reward_jump_height(self):
         # Reward the robot for jumping high
         self.target_jump_height = self.cfg.terrain.step_height + self.cfg.rewards.base_height_target
@@ -1191,6 +1224,18 @@ class LeggedRobot(BaseTask):
         self.target_height[~mask] = self.cfg.rewards.base_height_target  # False 时赋值
         return torch.square(self.root_states[:,2] - self.target_height[:])
         
+    def _reward_tracking_yaw(self):
+        rew = torch.exp(-torch.abs(self.target_yaw - self.yaw))
+        return rew
+    
+    def _reward_jump(self):
+        self.target_jump_height = self.cfg.terrain.step_height + self.cfg.rewards.base_height_target
+        self.target_height = torch.zeros_like(self.root_states[:, 2])
+        mask = self.commands[:, 4] > 0.5  # 获取布尔掩码
+        self.target_height[mask] = self.target_jump_height  # True 时赋值
+        self.target_height[~mask] = self.cfg.rewards.base_height_target  # False 时赋值
+        rew = torch.exp(-torch.abs(self.target_height - self.root_states[:, 2]))
+        return rew
         
     def _reward_lin_vel_z(self):
         # Penalize z axis base linear velocity

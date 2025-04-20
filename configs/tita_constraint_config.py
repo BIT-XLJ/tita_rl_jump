@@ -63,7 +63,7 @@ class TitaConstraintRoughCfg( LeggedRobotCfg ):
     class control( LeggedRobotCfg.control ):
         # PD Drive parameters:
         control_type = 'P'
-        stiffness = {'joint': 40}  # [N*m/rad]
+        stiffness = {'joint': 60}  # [N*m/rad]
         damping = {'joint': 1.0}     # [N*m*s/rad]
         # action scale: target angle = actionScale * action + defaultAngle
         action_scale = 0.5
@@ -104,24 +104,26 @@ class TitaConstraintRoughCfg( LeggedRobotCfg ):
             torques = 0.0
             powers = -2e-5
             termination = -200
-            tracking_lin_vel = 1.0
+            tracking_lin_vel = 2.0
             tracking_ang_vel = 0.5
             lin_vel_z = -0.0
             ang_vel_xy = -0.05
             dof_vel = 0.0
             dof_acc = -2.5e-7
-            base_height = -0.5
+            base_height = 0.0
             feet_air_time = 0.0
-            collision = -1.0
+            collision = -10.0
             feet_stumble = 0.0
             action_rate = -0.01
             action_smoothness= 0
             stand_still = 0.0
             foot_clearance= -0.0
-            orientation=-1.0
+            orientation=-2.0
             tracking_goal_vel = 0.0 
-            jump_height = -4.5      #鼓励跳跃
-
+            jump_height = 0.0         #鼓励跳跃
+            tracking_yaw = 1.0
+            close_target = 30.0
+            jump = 60.0
 
 
     class domain_rand( LeggedRobotCfg.domain_rand):
@@ -180,9 +182,9 @@ class TitaConstraintRoughCfg( LeggedRobotCfg ):
             torque_limit = 0.1
             dof_vel_limits = 0.1
             # vel_smoothness = 0.1
-            acc_smoothness = 0.1
+            acc_smoothness = 0.001
             #collision = 0.1
-            feet_contact_forces = 0.01
+            feet_contact_forces = 0.001
             stumble = 0.1
         class d_values:
             pos_limit = 0.0

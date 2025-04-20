@@ -81,7 +81,7 @@ class LeggedRobotCfg(BaseConfig):
         platform_size = 3.0  # [m]
         reach_goal_threshold = 0.1  # [m]
         step_height = 0.4  # [m]
-        jump_threshold = 0.25 # [m],距离高台jump_threshold开始跳跃
+        jump_threshold = 0.4 # [m],距离高台jump_threshold开始跳跃
 
     class commands:
         curriculum = False
