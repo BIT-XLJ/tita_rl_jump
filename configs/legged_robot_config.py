@@ -166,6 +166,7 @@ class LeggedRobotCfg(BaseConfig):
         # action_buf_len = 5
 
     class rewards:
+        feet_air_time_target = 0.6 # 滞空时间
         class scales:
             termination = -0.0
             tracking_lin_vel = 1.0
