@@ -147,7 +147,9 @@ class LeggedRobot(BaseTask):
         self.commands = torch.zeros(self.num_envs, self.cfg.commands.num_commands, dtype=torch.float, device=self.device, requires_grad=False) # x vel, y vel, yaw vel, heading
         self.commands_scale = torch.tensor([self.obs_scales.lin_vel, self.obs_scales.lin_vel, self.obs_scales.ang_vel], device=self.device, requires_grad=False,) # TODO change this
         self.feet_air_time = torch.zeros(self.num_envs, self.feet_indices.shape[0], dtype=torch.float, device=self.device, requires_grad=False)
+        self.fly_time = torch.zeros(self.num_envs, dtype=torch.float, device=self.device, requires_grad=False)
         self.last_contacts = torch.zeros(self.num_envs, len(self.feet_indices), dtype=torch.bool, device=self.device, requires_grad=False)
+        self.last_fly = torch.zeros(self.num_envs, dtype=torch.bool, device=self.device, requires_grad=False)
         self.base_lin_vel = quat_rotate_inverse(self.base_quat, self.root_states[:, 7:10])
         self.base_ang_vel = quat_rotate_inverse(self.base_quat, self.root_states[:, 10:13])
         self.projected_gravity = quat_rotate_inverse(self.base_quat, self.gravity_vec)
@@ -455,6 +457,8 @@ class LeggedRobot(BaseTask):
         contact = self.contact_forces[:, self.feet_indices, 2] > 1.
         self.contact_filt = torch.logical_or(contact, self.last_contacts) 
         self.last_contacts = contact
+
+
 
         self._post_physics_step_callback()
 
@@ -796,6 +800,7 @@ class LeggedRobot(BaseTask):
         self.last_torques[env_ids] = 0.
         self.last_root_vel[env_ids] = 0.
         self.feet_air_time[env_ids] = 0.
+        self.fly_time[env_ids] = 0.
         self.episode_length_buf[env_ids] = 0
         self.reset_buf[env_ids] = 1
         self.obs_history_buf[env_ids, :, :] = 0.
@@ -1179,7 +1184,7 @@ class LeggedRobot(BaseTask):
         
         #  self.commands[:, 4] = False
         # jump_envs_ids = (torch.norm(self.env_origins[:,:2] - self.root_states[:, :2], dim=1) < self.cfg.terrain.platform_size/2 + self.cfg.terrain.jump_threshold * (0.6 + 0.4 * torch.rand(1)).item()) & (torch.norm(self.env_origins[:,:2] - self.root_states[:, :2], dim=1) > self.cfg.terrain.platform_size/2) & (~self.jump_bit_lock)
-        jump_envs_ids = (torch.norm(self.env_origins[:,:2] - self.root_states[:, :2], dim=1) < self.cfg.terrain.platform_size/2 + self.cfg.terrain.jump_threshold * (0.6 + 0.4 * torch.rand(1)).item()) & (torch.norm(self.env_origins[:,:2] - self.root_states[:, :2], dim=1) > self.cfg.terrain.platform_size/2)
+        jump_envs_ids = (torch.norm(self.env_origins[:,:2] - self.root_states[:, :2], dim=1) < self.cfg.terrain.platform_size/2 + self.cfg.terrain.jump_threshold ) & (torch.norm(self.env_origins[:,:2] - self.root_states[:, :2], dim=1) > self.cfg.terrain.platform_size/2)
         self.commands[:, 4] = jump_envs_ids  #给出跳跃指令
         # self.jump_bit_lock[jump_envs_ids] = True  #锁定跳跃指令，防止多次跳跃
 
@@ -1247,12 +1252,17 @@ class LeggedRobot(BaseTask):
     
     def _reward_jump(self):
         # Need to filter the contacts because the contact reporting of PhysX is unreliable on meshes
-        contact = self.contact_forces[:, self.feet_indices, 2] > 1.
-        contact_filt = torch.logical_or(contact, self.last_contacts) 
-        self.last_contacts = contact
-        self.feet_air_time[~contact_filt] += self.dt
-        return torch.sum(self.feet_air_time,dim=-1) * (self.commands[:, 4] > 0.5) #no reward for zero command
-    
+        # contact = self.contact_forces[:, self.feet_indices, 2] > 1.
+        # contact_filt = torch.logical_or(contact, self.last_contacts) 
+        # self.last_contacts = contact
+        # self.feet_air_time[~contact_filt] += self.dt
+        # return torch.sum(self.feet_air_time,dim=-1) * (self.commands[:, 4] > 0.5) #no reward for zero command
+        fly = (self.contact_forces[:, self.feet_indices[0], 2] < 1.) & (self.contact_forces[:, self.feet_indices[1], 2] < 1.)
+        fly_filt = torch.logical_and(fly, self.last_fly) 
+        self.last_fly = fly
+        self.fly_time[fly_filt] += self.dt
+        return self.fly_time * (self.commands[:, 4] > 0.5) #no reward for zero command,奖励同时跳跃
+
     def _reward_lin_vel_up(self):
         mask = self.commands[:, 4] > 0.5
         return self.base_lin_vel[:, 2] * mask #鼓励z轴线速度向上，z轴线速度越大，奖励越大

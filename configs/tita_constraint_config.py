@@ -93,7 +93,7 @@ class TitaConstraintRoughCfg( LeggedRobotCfg ):
         foot_name = "leg_4"
         name = "tita"
         penalize_contacts_on = ["leg_3"]
-        terminate_after_contacts_on = ["base"]
+        terminate_after_contacts_on = ["base","leg_2","leg_3"]
         self_collisions = 0 # 1 to disable, 0 to enable...bitwise filter
         flip_visual_attachments = False
   
@@ -104,13 +104,13 @@ class TitaConstraintRoughCfg( LeggedRobotCfg ):
             torques = 0.0
             powers = -2e-5
             termination = -200
-            tracking_lin_vel = 1.0
+            tracking_lin_vel = 20.0
             tracking_ang_vel = 0.5
             lin_vel_z = -0.0
             ang_vel_xy = -0.05
             dof_vel = 0.0
             dof_acc = -2.5e-7
-            base_height = -1.0
+            base_height = -5.0
             feet_air_time = 1.0
             collision = -1.0
             feet_stumble = 0.0
@@ -120,12 +120,12 @@ class TitaConstraintRoughCfg( LeggedRobotCfg ):
             foot_clearance= -0.0
             orientation=-10.0
             tracking_goal_vel = 0.0 
-            jump_height = 10.0         #鼓励跳跃
-            tracking_yaw = 0.0         #10
+            jump_height = 0.0         #鼓励跳跃
+            tracking_yaw = 20.0         #10
             close_target = 0.0
-            jump = 10.0
+            jump = 50.0
             feet_contact_forces = 0.0
-            lin_vel_up = 100.0
+            lin_vel_up = 200.0
 
 
     class domain_rand( LeggedRobotCfg.domain_rand):
