@@ -145,7 +145,7 @@ class LeggedRobot(BaseTask):
         self.contact_buf = torch.zeros(self.num_envs, self.cfg.env.contact_buf_len, 2, device=self.device, dtype=torch.float)
 
         self.commands = torch.zeros(self.num_envs, self.cfg.commands.num_commands, dtype=torch.float, device=self.device, requires_grad=False) # x vel, y vel, yaw vel, heading
-        self.commands_scale = torch.tensor([self.obs_scales.lin_vel, self.obs_scales.lin_vel, self.obs_scales.ang_vel,self.obs_scales.jump_cmd], device=self.device, requires_grad=False,) # TODO change this
+        self.commands_scale = torch.tensor([self.obs_scales.lin_vel, self.obs_scales.lin_vel, self.obs_scales.ang_vel], device=self.device, requires_grad=False,) # TODO change this
         self.feet_air_time = torch.zeros(self.num_envs, self.feet_indices.shape[0], dtype=torch.float, device=self.device, requires_grad=False)
         self.last_contacts = torch.zeros(self.num_envs, len(self.feet_indices), dtype=torch.bool, device=self.device, requires_grad=False)
         self.base_lin_vel = quat_rotate_inverse(self.base_quat, self.root_states[:, 7:10])
@@ -363,7 +363,7 @@ class LeggedRobot(BaseTask):
 
         obs_buf =torch.cat((self.base_ang_vel  * self.obs_scales.ang_vel,
                             self.projected_gravity,
-                            torch.cat([self.commands[:, :3], self.commands[:, 4].unsqueeze(1)], dim=1) * self.commands_scale,
+                            self.commands[:, :3] * self.commands_scale, #加入跳跃指令的观测
                             self.reindex((self.dof_pos - self.default_dof_pos) * self.obs_scales.dof_pos),
                             self.reindex(self.dof_vel * self.obs_scales.dof_vel),
                             #self.reindex_feet(self.contact_filt.float()-0.5),
@@ -461,7 +461,7 @@ class LeggedRobot(BaseTask):
         # compute observations, rewards, resets, ...
         self.check_termination()
         self._update_jump_cmd()
-        self.compute_jump_time()
+        # self.compute_jump_time()
         self.compute_reward()
         self.compute_cost()
         env_ids = self.reset_buf.nonzero(as_tuple=False).flatten()
@@ -1178,9 +1178,10 @@ class LeggedRobot(BaseTask):
     def _update_jump_cmd(self):
         
         #  self.commands[:, 4] = False
-        jump_envs_ids = (torch.norm(self.env_origins[:,:2] - self.root_states[:, :2], dim=1) < self.cfg.terrain.platform_size/2 + self.cfg.terrain.jump_threshold * (0.6 + 0.4 * torch.rand(1)).item()) & (torch.norm(self.env_origins[:,:2] - self.root_states[:, :2], dim=1) > self.cfg.terrain.platform_size/2) & (~self.jump_bit_lock)
+        # jump_envs_ids = (torch.norm(self.env_origins[:,:2] - self.root_states[:, :2], dim=1) < self.cfg.terrain.platform_size/2 + self.cfg.terrain.jump_threshold * (0.6 + 0.4 * torch.rand(1)).item()) & (torch.norm(self.env_origins[:,:2] - self.root_states[:, :2], dim=1) > self.cfg.terrain.platform_size/2) & (~self.jump_bit_lock)
+        jump_envs_ids = (torch.norm(self.env_origins[:,:2] - self.root_states[:, :2], dim=1) < self.cfg.terrain.platform_size/2 + self.cfg.terrain.jump_threshold * (0.6 + 0.4 * torch.rand(1)).item()) & (torch.norm(self.env_origins[:,:2] - self.root_states[:, :2], dim=1) > self.cfg.terrain.platform_size/2)
         self.commands[:, 4] = jump_envs_ids  #给出跳跃指令
-        self.jump_bit_lock[jump_envs_ids] = True  #锁定跳跃指令，防止多次跳跃
+        # self.jump_bit_lock[jump_envs_ids] = True  #锁定跳跃指令，防止多次跳跃
 
     
     def _update_terrain_curriculum(self, env_ids):
@@ -1237,7 +1238,7 @@ class LeggedRobot(BaseTask):
         mask = self.commands[:, 4] > 0.5  # 获取布尔掩码
         # self.target_height[mask] = self.target_jump_height  # True 时赋值
         # self.target_height[~mask] = self.cfg.rewards.base_height_target  # False 时赋值
-        self.target_jump_height = self.cfg.rewards.base_height_target + self.cfg.terrain.step_height + 0.3
+        self.target_jump_height = self.cfg.rewards.base_height_target + self.cfg.terrain.step_height + 0.2
         return torch.min(torch.tensor(1),torch.max(torch.tensor(0),(self.root_states[:,2] - self.cfg.rewards.base_height_target)/( self.target_jump_height - self.cfg.rewards.base_height_target) * mask))
         
     def _reward_tracking_yaw(self):
@@ -1251,7 +1252,11 @@ class LeggedRobot(BaseTask):
         self.last_contacts = contact
         self.feet_air_time[~contact_filt] += self.dt
         return torch.sum(self.feet_air_time,dim=-1) * (self.commands[:, 4] > 0.5) #no reward for zero command
-        
+    
+    def _reward_lin_vel_up(self):
+        mask = self.commands[:, 4] > 0.5
+        return self.base_lin_vel[:, 2] * mask #鼓励z轴线速度向上，z轴线速度越大，奖励越大
+
     def _reward_lin_vel_z(self):
         # Penalize z axis base linear velocity
         return torch.square(self.base_lin_vel[:, 2])
@@ -1523,8 +1528,8 @@ class LeggedRobot(BaseTask):
         ang_vel_xy = 0.01*torch.sum(torch.square(self.base_ang_vel[:, :2]), dim=1)
         return ang_vel_xy
     
-    def _cost_lin_vel_z(self):
-        return torch.square(self.base_lin_vel[:, 2])
+    # def _cost_lin_vel_z(self):
+    #     return torch.square(self.base_lin_vel[:, 2])
     
     def _cost_torques(self):
         # Penalize torques

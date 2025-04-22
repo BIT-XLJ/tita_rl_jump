@@ -36,7 +36,7 @@ class TitaConstraintRoughCfg( LeggedRobotCfg ):
 
         n_scan = 187
         n_priv_latent =  4 + 1 + 8 + 8 + 8 + 6 + 1 + 2 + 1 - 3
-        n_proprio = 33
+        n_proprio = 33 #加入了跳跃指令
         history_len = 10
         num_observations = n_proprio + n_scan + history_len*n_proprio + n_priv_latent
 
@@ -82,9 +82,9 @@ class TitaConstraintRoughCfg( LeggedRobotCfg ):
         global_reference = False
 
         class ranges:
-            lin_vel_x = [0, 1.5]  # min max [m/s]
-            lin_vel_y = [-0.001, 0.001]  # min max [m/s]
-            ang_vel_yaw = [-0.01, 0.01]  # min max [rad/s]
+            lin_vel_x = [1, 2]  # min max [m/s]
+            lin_vel_y = [-0.1, 0.1]  # min max [m/s]
+            ang_vel_yaw = [-0.001, 0.001]  # min max [rad/s]
             heading = [-0.01, 0.01]
 
     class asset( LeggedRobotCfg.asset ):
@@ -103,16 +103,16 @@ class TitaConstraintRoughCfg( LeggedRobotCfg ):
         class scales( LeggedRobotCfg.rewards.scales ):
             torques = 0.0
             powers = -2e-5
-            termination = -100
-            tracking_lin_vel = 10.0
+            termination = -200
+            tracking_lin_vel = 1.0
             tracking_ang_vel = 0.5
             lin_vel_z = -0.0
             ang_vel_xy = -0.05
             dof_vel = 0.0
             dof_acc = -2.5e-7
-            base_height = -5.0
-            feet_air_time = 0.0
-            collision = -5.0
+            base_height = -1.0
+            feet_air_time = 1.0
+            collision = -1.0
             feet_stumble = 0.0
             action_rate = -0.001
             action_smoothness= 0
@@ -120,11 +120,12 @@ class TitaConstraintRoughCfg( LeggedRobotCfg ):
             foot_clearance= -0.0
             orientation=-10.0
             tracking_goal_vel = 0.0 
-            jump_height = 25.0         #鼓励跳跃
-            tracking_yaw = 10.0
-            close_target = 5.0
-            jump = 500.0
-            feet_contact_forces = 0.05
+            jump_height = 10.0         #鼓励跳跃
+            tracking_yaw = 0.0         #10
+            close_target = 0.0
+            jump = 10.0
+            feet_contact_forces = 0.0
+            lin_vel_up = 100.0
 
 
     class domain_rand( LeggedRobotCfg.domain_rand):

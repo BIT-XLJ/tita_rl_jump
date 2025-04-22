@@ -166,7 +166,7 @@ class LeggedRobotCfg(BaseConfig):
         # action_buf_len = 5
 
     class rewards:
-        feet_air_time_target = 0.7 # 滞空时间
+        feet_air_time_target = 1.2 # 滞空时间
         class scales:
             termination = -0.0
             tracking_lin_vel = 1.0
@@ -205,7 +205,7 @@ class LeggedRobotCfg(BaseConfig):
         clip_actions = 100
 
     class noise:
-        add_noise = False
+        add_noise = True
         noise_level = 1.0  # scales other values
         class noise_scales:
             dof_pos = 0.01
