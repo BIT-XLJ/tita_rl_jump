@@ -79,8 +79,8 @@ class LeggedRobotCfg(BaseConfig):
         slope_treshold = 0.75  # slopes above this threshold will be corrected to vertical surfaces
         num_goals = 1
         platform_size = 3.0  # [m]
-        reach_goal_threshold = 0.1  # [m]
-        step_height = 0.4  # [m]
+        reach_goal_threshold = 0.2  # [m]
+        step_height = 0.2  # [m]
         jump_threshold = 0.4 # [m],距离高台jump_threshold开始跳跃
 
     class commands:
@@ -166,7 +166,7 @@ class LeggedRobotCfg(BaseConfig):
         # action_buf_len = 5
 
     class rewards:
-        feet_air_time_target = 0.6 # 滞空时间
+        feet_air_time_target = 0.7 # 滞空时间
         class scales:
             termination = -0.0
             tracking_lin_vel = 1.0
@@ -174,7 +174,7 @@ class LeggedRobotCfg(BaseConfig):
             lin_vel_z = -2.0
             ang_vel_xy = -0.05
             orientation = -0.
-            torques = -0.00001
+            torques = -0.0001
             dof_vel = -0.
             dof_acc = -2.5e-7
             base_height = -0.
@@ -198,13 +198,14 @@ class LeggedRobotCfg(BaseConfig):
             ang_vel = 0.25
             dof_pos = 1.0
             dof_vel = 0.05
+            jump_cmd = 1.0
             height_measurements = 5.0
         clip_observations = 100.
         #clip_actions = 1.2
         clip_actions = 100
 
     class noise:
-        add_noise = True
+        add_noise = False
         noise_level = 1.0  # scales other values
         class noise_scales:
             dof_pos = 0.01

@@ -112,18 +112,19 @@ class TitaConstraintRoughCfg( LeggedRobotCfg ):
             dof_acc = -2.5e-7
             base_height = -5.0
             feet_air_time = 0.0
-            collision = -1.0
+            collision = -5.0
             feet_stumble = 0.0
-            action_rate = -0.01
+            action_rate = -0.001
             action_smoothness= 0
             stand_still = 0.0
             foot_clearance= -0.0
-            orientation=-1.0
+            orientation=-10.0
             tracking_goal_vel = 0.0 
-            jump_height = 15.0         #鼓励跳跃
+            jump_height = 25.0         #鼓励跳跃
             tracking_yaw = 10.0
             close_target = 5.0
-            jump = 50.0
+            jump = 500.0
+            feet_contact_forces = 0.05
 
 
     class domain_rand( LeggedRobotCfg.domain_rand):
@@ -178,9 +179,9 @@ class TitaConstraintRoughCfg( LeggedRobotCfg ):
     
     class costs:
         class scales:
-            pos_limit = 0.1
-            torque_limit = 0.1
-            dof_vel_limits = 0.1
+            pos_limit = 0.01
+            torque_limit = 0.01
+            dof_vel_limits = 0.01
             # vel_smoothness = 0.1
             acc_smoothness = 0.001
             #collision = 0.1
