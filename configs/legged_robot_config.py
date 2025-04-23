@@ -80,7 +80,7 @@ class LeggedRobotCfg(BaseConfig):
         num_goals = 1
         platform_size = 3.0  # [m]
         reach_goal_threshold = 0.2  # [m]
-        step_height = 0.25  # [m]
+        step_height = 0.0  # [m]
         jump_threshold = 0.5 # [m],距离高台jump_threshold开始跳跃
 
     class commands:
@@ -88,6 +88,7 @@ class LeggedRobotCfg(BaseConfig):
         max_curriculum = 1.
         num_commands = 5  # default: lin_vel_x, lin_vel_y, ang_vel_yaw, heading ,jump binary(in heading mode ang_vel_yaw is recomputed from heading error)
         resampling_time = 10.  # time before command are changed[s]
+        jumping_time = 1.0  # time before jumping command is changed[s]
         heading_command = True  # if true: compute ang vel command from heading error
         global_reference = False
 

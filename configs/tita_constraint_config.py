@@ -78,6 +78,7 @@ class TitaConstraintRoughCfg( LeggedRobotCfg ):
         max_curriculum = 1.
         num_commands = 5  # default: lin_vel_x, lin_vel_y, ang_vel_yaw, heading (in heading mode ang_vel_yaw is recomputed from heading error)
         resampling_time = 10.  # time before command are changed[s]
+        jumping_time = 1.0
         heading_command = True  # if true: compute ang vel command from heading error
         global_reference = False
 
@@ -104,31 +105,32 @@ class TitaConstraintRoughCfg( LeggedRobotCfg ):
             torques = 0.0
             powers = -2e-5
             termination = -200
-            tracking_lin_vel = 20.0
+            tracking_lin_vel = 1.0
             tracking_ang_vel = 0.5
             lin_vel_z = -0.0
             ang_vel_xy = -0.05
             dof_vel = 0.0
             dof_acc = -2.5e-7
-            base_height = -5.0
-            feet_air_time = 1.0
+            base_height = -1.0
+            feet_air_time = 0.0
             collision = -1.0
             feet_stumble = 0.0
-            action_rate = -0.001
+            action_rate = -0.01
             action_smoothness= 0
             stand_still = 0.0
             foot_clearance= -0.0
-            orientation=-10.0
+            orientation=-1.0
             tracking_goal_vel = 0.0 
-            jump_height = 0.0         #鼓励跳跃
-            tracking_yaw = 20.0         #10
+            jump_height = 2.0         #鼓励跳跃
+            tracking_yaw = 1.0         #10
             close_target = 0.0
-            jump = 50.0
+            jump = 2.0
             feet_contact_forces = 0.0
-            lin_vel_up = 200.0
+            lin_vel_up = 2.0
 
 
     class domain_rand( LeggedRobotCfg.domain_rand):
+
         randomize_friction = True
         friction_range = [0.2, 2.75]
         randomize_restitution = True
@@ -180,13 +182,13 @@ class TitaConstraintRoughCfg( LeggedRobotCfg ):
     
     class costs:
         class scales:
-            pos_limit = 0.01
-            torque_limit = 0.01
-            dof_vel_limits = 0.01
+            pos_limit = 0.1
+            torque_limit = 0.1
+            dof_vel_limits = 0.1
             # vel_smoothness = 0.1
-            acc_smoothness = 0.001
+            acc_smoothness = 0.05
             #collision = 0.1
-            feet_contact_forces = 0.001
+            feet_contact_forces = 0.1
             stumble = 0.1
         class d_values:
             pos_limit = 0.0
