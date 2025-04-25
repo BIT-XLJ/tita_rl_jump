@@ -365,7 +365,7 @@ class LeggedRobot(BaseTask):
 
         obs_buf =torch.cat((self.base_ang_vel  * self.obs_scales.ang_vel,
                             self.projected_gravity,
-                            self.commands[:, :3] * self.commands_scale, #加入跳跃指令的观测
+                            self.commands[:, :3] * self.commands_scale, #加入z轴速度指令的观测
                             self.reindex((self.dof_pos - self.default_dof_pos) * self.obs_scales.dof_pos),
                             self.reindex(self.dof_vel * self.obs_scales.dof_vel),
                             #self.reindex_feet(self.contact_filt.float()-0.5),
@@ -573,8 +573,8 @@ class LeggedRobot(BaseTask):
         """
         env_ids = (self.episode_length_buf % int(self.cfg.commands.resampling_time / self.dt)==0).nonzero(as_tuple=False).flatten()
         self._resample_commands(env_ids)
-        jump_env_ids = (self.episode_length_buf % int(self.cfg.commands.jumping_time / self.dt)==0).nonzero(as_tuple=False).flatten()
-        self._update_jump_cmd(jump_env_ids)
+        # jump_env_ids = (self.episode_length_buf % int(self.cfg.commands.jumping_time / self.dt)==0).nonzero(as_tuple=False).flatten()
+        # self._update_jump_cmd(jump_env_ids)
 
         if self.cfg.commands.heading_command:
             forward = quat_apply(self.base_quat, self.forward_vec)
@@ -738,9 +738,9 @@ class LeggedRobot(BaseTask):
         self.reset_buf = torch.any(torch.norm(self.contact_forces[:, self.termination_contact_indices, :], dim=-1) > 1.,
                                    dim=1)
         self.time_out_buf = self.episode_length_buf > self.max_episode_length  # no terminal reward for time-outs
-        self.reach_goal_buf = torch.norm(self.root_states[:, :2] - self.env_origins[:,:2], dim=-1) < self.cfg.terrain.reach_goal_threshold
+        # self.reach_goal_buf = torch.norm(self.root_states[:, :2] - self.env_origins[:,:2], dim=-1) < self.cfg.terrain.reach_goal_threshold
         self.reset_buf |= self.time_out_buf
-        self.reset_buf |= self.reach_goal_buf
+        # self.reset_buf |= self.reach_goal_buf
         
     def compute_reward(self):
         """ Compute rewards
@@ -883,6 +883,28 @@ class LeggedRobot(BaseTask):
         self.gym.set_dof_state_tensor_indexed(self.sim,
                                               gymtorch.unwrap_tensor(self.dof_state),
                                               gymtorch.unwrap_tensor(env_ids_int32), len(env_ids_int32))
+
+
+    def  _get_phase(self):
+        cycle_time = self.cfg.rewards.cycle_time
+        phase = self.episode_length_buf * self.dt / cycle_time
+        return phase
+
+    def _get_gait_phase(self):
+        # return float mask 1 is stance, 0 is swing
+        phase = self._get_phase()
+        sin_pos = torch.sin(2 * torch.pi * phase)
+        # Add double support phase
+        stance_mask = torch.zeros((self.num_envs, 2), device=self.device)
+        # left foot stance
+        stance_mask[:, 0] = sin_pos >= 0
+        # right foot stance
+        stance_mask[:, 1] = sin_pos < 0
+        # Double support phase
+        stance_mask[torch.abs(sin_pos) < 0.1] = 1
+
+        return stance_mask
+
 
     def create_sim(self):
         """ Creates simulation, terrain and evironments
@@ -1185,11 +1207,16 @@ class LeggedRobot(BaseTask):
         
         #  self.commands[:, 4] = False
         # jump_envs_ids = (torch.norm(self.env_origins[:,:2] - self.root_states[:, :2], dim=1) < self.cfg.terrain.platform_size/2 + self.cfg.terrain.jump_threshold * (0.6 + 0.4 * torch.rand(1)).item()) & (torch.norm(self.env_origins[:,:2] - self.root_states[:, :2], dim=1) > self.cfg.terrain.platform_size/2) & (~self.jump_bit_lock)
-        jump_envs_ids = (torch.norm(self.env_origins[:,:2] - self.root_states[:, :2], dim=1) < self.cfg.terrain.platform_size/2 + self.cfg.terrain.jump_threshold ) & (torch.norm(self.env_origins[:,:2] - self.root_states[:, :2], dim=1) > self.cfg.terrain.platform_size/2)
-        self.commands[jump_envs_ids, 4] = 1.0  #给出跳跃指令
-        self.commands[~jump_envs_ids, 4] = 0.0
+        # jump_envs_ids = (torch.norm(self.env_origins[:,:2] - self.root_states[:, :2], dim=1) < self.cfg.terrain.platform_size/2 + self.cfg.terrain.jump_threshold ) & (torch.norm(self.env_origins[:,:2] - self.root_states[:, :2], dim=1) > self.cfg.terrain.platform_size/2)
+        # self.commands[jump_envs_ids, 4] = 1.0  #给出跳跃指令
+        # self.commands[~jump_envs_ids, 4] = 0.0
         # self.jump_bit_lock[jump_envs_ids] = True  #锁定跳跃指令，防止多次跳跃
         # self.commands[env_ids, 4] = (self.commands[env_ids, 4] < 0.5).float()  #给出跳跃指令
+        current_values = self.commands[env_ids, 2]
+        low_val = self.command_ranges["lin_vel_z"][0]
+        high_val = self.command_ranges["lin_vel_z"][1]
+        # Toggle the values
+        self.commands[env_ids, 2] = torch.where(current_values == high_val, low_val, high_val)
 
     
     def _update_terrain_curriculum(self, env_ids):
@@ -1264,7 +1291,7 @@ class LeggedRobot(BaseTask):
         fly_filt = torch.logical_and(fly, self.last_fly) 
         self.last_fly = fly
         self.fly_time[fly_filt] += self.dt
-        return self.fly_time * (self.commands[:, 4] > 0.5) #no reward for zero command,奖励同时跳跃
+        return self.fly_time * (self.commands[:, 2] > 0.1) #no reward for zero command,奖励同时跳跃
 
     def _reward_lin_vel_up(self):
         mask = self.commands[:, 4] > 0.5
@@ -1317,7 +1344,7 @@ class LeggedRobot(BaseTask):
     
     def _reward_termination(self):
         # Terminal reward / penalty
-        return self.reset_buf * ~self.time_out_buf * ~self.reach_goal_buf
+        return self.reset_buf * ~self.time_out_buf 
     
     def _reward_dof_pos_limits(self):
         # Penalize dof positions too close to the limit
@@ -1336,7 +1363,7 @@ class LeggedRobot(BaseTask):
 
     def _reward_tracking_lin_vel(self):
         # Tracking of linear velocity commands (xy axes)
-        lin_vel_error = torch.sum(torch.square(self.commands[:, :2] - self.base_lin_vel[:, :2]), dim=1)
+        lin_vel_error = torch.sum(torch.square(self.commands[:, :3] - self.base_lin_vel[:, :3]), dim=1)
         return torch.exp(-lin_vel_error/self.cfg.rewards.tracking_sigma)
     
     def _reward_tracking_ang_vel(self):

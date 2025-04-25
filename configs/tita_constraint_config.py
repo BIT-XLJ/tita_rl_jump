@@ -36,7 +36,7 @@ class TitaConstraintRoughCfg( LeggedRobotCfg ):
 
         n_scan = 187
         n_priv_latent =  4 + 1 + 8 + 8 + 8 + 6 + 1 + 2 + 1 - 3
-        n_proprio = 33 #加入了跳跃指令
+        n_proprio = 33 #加入z轴速度指令
         history_len = 10
         num_observations = n_proprio + n_scan + history_len*n_proprio + n_priv_latent
 
@@ -76,17 +76,18 @@ class TitaConstraintRoughCfg( LeggedRobotCfg ):
     class commands( LeggedRobotCfg.control ):
         curriculum = False
         max_curriculum = 1.
-        num_commands = 5  # default: lin_vel_x, lin_vel_y, ang_vel_yaw, heading (in heading mode ang_vel_yaw is recomputed from heading error)
+        num_commands = 4  # default: lin_vel_x, lin_vel_y, ang_vel_yaw, heading (in heading mode ang_vel_yaw is recomputed from heading error)
         resampling_time = 10.  # time before command are changed[s]
-        jumping_time = 1.0
+        # jumping_time = 1.0
         heading_command = True  # if true: compute ang vel command from heading error
         global_reference = False
 
         class ranges:
-            lin_vel_x = [1, 2]  # min max [m/s]
-            lin_vel_y = [-0.1, 0.1]  # min max [m/s]
-            ang_vel_yaw = [-0.001, 0.001]  # min max [rad/s]
-            heading = [-0.01, 0.01]
+            lin_vel_x = [-1.0, 1.0]  # min max [m/s]
+            lin_vel_y = [-1.0, 1.0]  # min max [m/s]
+            # lin_vel_z = [0.0, 1.0]  # min max [m/s]
+            ang_vel_yaw = [-0.5, 0.5]  # min max [rad/s]
+            heading = [-3.14, 3.14]
 
     class asset( LeggedRobotCfg.asset ):
 
@@ -101,17 +102,18 @@ class TitaConstraintRoughCfg( LeggedRobotCfg ):
     class rewards( LeggedRobotCfg.rewards ):
         soft_dof_pos_limit = 0.9
         base_height_target = 0.35
+        cycle_time = 0.64
         class scales( LeggedRobotCfg.rewards.scales ):
             torques = 0.0
             powers = -2e-5
             termination = -200
-            tracking_lin_vel = 1.0
+            tracking_lin_vel = 2.0
             tracking_ang_vel = 0.5
             lin_vel_z = -0.0
             ang_vel_xy = -0.05
             dof_vel = 0.0
             dof_acc = -2.5e-7
-            base_height = -1.0
+            base_height = -0.1
             feet_air_time = 0.0
             collision = -1.0
             feet_stumble = 0.0
@@ -119,14 +121,14 @@ class TitaConstraintRoughCfg( LeggedRobotCfg ):
             action_smoothness= 0
             stand_still = 0.0
             foot_clearance= -0.0
-            orientation=-1.0
-            tracking_goal_vel = 0.0 
-            jump_height = 2.0         #鼓励跳跃
-            tracking_yaw = 1.0         #10
-            close_target = 0.0
-            jump = 2.0
-            feet_contact_forces = 0.0
-            lin_vel_up = 2.0
+            orientation= -3.0
+            tracking_goal_vel = 0.0   
+            jump_height = 0.0         #鼓励跳跃,2.0
+            tracking_yaw = 0.0         #10,1.0
+            close_target = 0.0          # 0.0
+            jump = 0.0                   # 2.0
+            feet_contact_forces = 0.0     # 0.0
+            lin_vel_up = 0.0               # 2.0
 
 
     class domain_rand( LeggedRobotCfg.domain_rand):
@@ -182,11 +184,11 @@ class TitaConstraintRoughCfg( LeggedRobotCfg ):
     
     class costs:
         class scales:
-            pos_limit = 0.1
+            pos_limit = 0.3
             torque_limit = 0.1
             dof_vel_limits = 0.1
             # vel_smoothness = 0.1
-            acc_smoothness = 0.05
+            acc_smoothness = 0.1
             #collision = 0.1
             feet_contact_forces = 0.1
             stumble = 0.1
@@ -248,7 +250,7 @@ class TitaConstraintRoughCfgPPO( LeggedRobotCfgPPO ):
         algorithm_class_name = 'NP3O'
         max_iterations = 10000
         num_steps_per_env = 24
-        resume = True
+        resume = False
         resume_path = 'tita_example_10000.pt'
 
  

@@ -168,22 +168,23 @@ class LeggedRobotCfg(BaseConfig):
 
     class rewards:
         feet_air_time_target = 1.2 # 滞空时间
+        cycle_time = 0.64
         class scales:
             termination = -0.0
             tracking_lin_vel = 1.0
             tracking_ang_vel = 0.5
-            lin_vel_z = -2.0
+            lin_vel_z = 0.0
             ang_vel_xy = -0.05
             orientation = -0.
             torques = -0.0001
             dof_vel = -0.
             dof_acc = -2.5e-7
             base_height = -0.
-            feet_air_time = 1.0
+            feet_air_time = 0.0
             collision = -1.
             feet_stumble = -0.0
             action_rate = -0.01
-            stand_still = -0.
+            stand_still = -0.0
 
         only_positive_rewards = False  # if true negative total rewards are clipped at zero (avoids early termination problems)
         tracking_sigma = 0.25  # tracking reward = exp(-error^2/sigma)
@@ -199,7 +200,7 @@ class LeggedRobotCfg(BaseConfig):
             ang_vel = 0.25
             dof_pos = 1.0
             dof_vel = 0.05
-            jump_cmd = 1.0
+            # jump_cmd = 1.0
             height_measurements = 5.0
         clip_observations = 100.
         #clip_actions = 1.2
