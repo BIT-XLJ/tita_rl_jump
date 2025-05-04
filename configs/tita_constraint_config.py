@@ -36,7 +36,7 @@ class TitaConstraintRoughCfg( LeggedRobotCfg ):
 
         n_scan = 187
         n_priv_latent =  4 + 1 + 8 + 8 + 8 + 6 + 1 + 2 + 1 - 3
-        n_proprio = 33 #加入z轴速度指令
+        n_proprio = 33 
         history_len = 10
         num_observations = n_proprio + n_scan + history_len*n_proprio + n_priv_latent
 

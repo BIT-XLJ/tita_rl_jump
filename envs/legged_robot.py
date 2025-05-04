@@ -389,7 +389,7 @@ class LeggedRobot(BaseTask):
         if self.cfg.noise.add_noise:
             obs_buf += (2 * torch.rand_like(obs_buf) - 1) * noise_vec.to(self.device)
 
-        priv_latent = torch.cat((
+        priv_latent = torch.cat((    #在这里加上特权观测，相位，支撑掩码（已经有触地掩码了）
             self.base_lin_vel * self.obs_scales.lin_vel,
             self.reindex_feet(self.contact_filt.float()-0.5),
             self.randomized_lag_tensor,
@@ -885,23 +885,56 @@ class LeggedRobot(BaseTask):
                                               gymtorch.unwrap_tensor(env_ids_int32), len(env_ids_int32))
 
 
-    def  _get_phase(self):
+    def _get_phase(self):
         cycle_time = self.cfg.rewards.cycle_time
-        phase = self.episode_length_buf * self.dt / cycle_time
-        return phase
+        phase = self.episode_length_buf * self.dt / cycle_time - int(self.episode_length_buf * self.dt / cycle_time) #将phase限制在0~1之间
+        jump_cmd = (self.episode_length_buf * self.dt / (cycle_time*10) - int(self.episode_length_buf * self.dt / (cycle_time*10))) >= 0.9
+        return phase * jump_cmd , jump_cmd
+
+    def compute_ref_state(self):
+        phase,jump_cmd = self._get_phase()
+        sin_pos = torch.sin(2 * torch.pi * phase)
+        sin_pos_l = sin_pos.clone()
+        sin_pos_r = sin_pos.clone()
+        new_dof_pos = torch.zeros_like(self.dof_pos)
+        # 为每个关节生成正弦波位置
+        self.ref_dof_pos = torch.zeros_like(self.dof_pos)
+        self.ref_dof_pos[jump_cmd,1] = 1.4
+        self.ref_dof_pos[jump_cmd,2] = -2.7
+        self.ref_dof_pos[jump_cmd,5] = 1.4
+        self.ref_dof_pos[jump_cmd,6] = -2.7
+
+        self.ref_dof_pos[~jump_cmd,1] = 0.8
+        self.ref_dof_pos[~jump_cmd,2] = -1.5
+        self.ref_dof_pos[~jump_cmd,5] = 0.8
+        self.ref_dof_pos[~jump_cmd,6] = -1.5
+
+        scale_1 = self.cfg.rewards.target_joint_pos_scale  #0.7
+        scale_2 = -2 * scale_1
+
+        if sin_pos_l < 0:
+            sin_pos_l = 0
+        new_dof_pos[:,1] = sin_pos_l * scale_1
+        new_dof_pos[:,2] = sin_pos_l * scale_2
+        
+        if sin_pos_r < 0:
+            sin_pos_r = 0
+        new_dof_pos[:,5] = sin_pos_r * scale_1
+        new_dof_pos[:,6] = sin_pos_r * scale_2
+        
+        self.ref_dof_pos -= new_dof_pos
+
 
     def _get_gait_phase(self):
         # return float mask 1 is stance, 0 is swing
-        phase = self._get_phase()
-        sin_pos = torch.sin(2 * torch.pi * phase)
+        phase,jump_cmd = self._get_phase()
+        # sin_pos = torch.sin(2 * torch.pi * phase)
         # Add double support phase
         stance_mask = torch.zeros((self.num_envs, 2), device=self.device)
         # left foot stance
-        stance_mask[:, 0] = sin_pos >= 0
+        stance_mask[:, 0] = (phase >= 0.0 and phase < 0.25)
         # right foot stance
-        stance_mask[:, 1] = sin_pos < 0
-        # Double support phase
-        stance_mask[torch.abs(sin_pos) < 0.1] = 1
+        stance_mask[:, 1] = (phase >= 0.0 and phase < 0.25)
 
         return stance_mask
 
