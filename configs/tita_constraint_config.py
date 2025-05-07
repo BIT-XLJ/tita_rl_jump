@@ -83,11 +83,11 @@ class TitaConstraintRoughCfg( LeggedRobotCfg ):
         global_reference = False
 
         class ranges:
-            lin_vel_x = [-0.1, 0.1]  # min max [m/s]
-            lin_vel_y = [-0.1, 0.1]  # min max [m/s]
+            lin_vel_x = [-0.01, 0.01]  # min max [m/s]
+            lin_vel_y = [-0.01, 0.01]  # min max [m/s]
             # lin_vel_z = [0.0, 1.0]  # min max [m/s]
             ang_vel_yaw = [-0.01, 0.01]  # min max [rad/s]
-            heading = [-3.14, 3.14]
+            heading = [-0.01, 0.01]
 
     class asset( LeggedRobotCfg.asset ):
 
@@ -102,12 +102,12 @@ class TitaConstraintRoughCfg( LeggedRobotCfg ):
     class rewards( LeggedRobotCfg.rewards ):
         soft_dof_pos_limit = 0.9
         base_height_target = 0.35
-        cycle_time = 0.64
+        cycle_time = 0.8
         class scales( LeggedRobotCfg.rewards.scales ):
             torques = 0.0
             powers = -2e-5
             termination = -200
-            tracking_lin_vel = 5.5
+            tracking_lin_vel = 3.3 #5.5
             tracking_ang_vel = 0.5
             lin_vel_z = -0.0
             ang_vel_xy = -0.05
