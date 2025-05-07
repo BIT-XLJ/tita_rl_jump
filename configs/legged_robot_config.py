@@ -169,7 +169,7 @@ class LeggedRobotCfg(BaseConfig):
     class rewards:
         feet_air_time_target = 1.2 # 滞空时间
         cycle_time = 0.64
-        target_joint_pos_scale = 0.7
+        target_joint_pos_scale = 0.5
         class scales:
             termination = -0.0
             tracking_lin_vel = 1.0

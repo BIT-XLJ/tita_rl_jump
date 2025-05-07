@@ -96,25 +96,25 @@ while not gym.query_viewer_has_closed(viewer):
     
     # 为每个关节生成正弦波位置
     new_dof_pos = np.zeros(num_dofs, dtype=np.float32)
-    new_dof_pos[1] = 1.4
-    new_dof_pos[2] = -2.7
-    new_dof_pos[5] = 1.5
-    new_dof_pos[6] = -2.7
+    new_dof_pos[1] = 1.1
+    new_dof_pos[2] = -2.1
+    new_dof_pos[5] = 1.1
+    new_dof_pos[6] = -2.1
 
-    phase =  torch.tensor(t / cycle_time)
+    phase =  torch.tensor(t / cycle_time - torch.floor(torch.tensor(t / cycle_time)))
     sin_pos = torch.sin(2 * torch.pi * phase)
     sin_pos_l = sin_pos.clone()
     sin_pos_r = sin_pos.clone()
     ref_dof_pos = np.zeros(num_dofs, dtype=np.float32)
-    scale_1 = 0.7  #0.7
+    scale_1 = 0.3  #0.7
     scale_2 = -2 * scale_1
     # left foot stance phase set to default joint pos
-    if sin_pos_l < 0:
+    if phase>0.25:
         sin_pos_l = 0
     ref_dof_pos[1] = sin_pos_l * scale_1
     ref_dof_pos[2] = sin_pos_l * scale_2
     # right foot stance phase set to default joint pos
-    if sin_pos_r < 0:
+    if phase>0.25:
         sin_pos_r = 0
     ref_dof_pos[5] = sin_pos_r * scale_1
     ref_dof_pos[6] = sin_pos_r * scale_2
