@@ -753,7 +753,7 @@ class LeggedRobot(BaseTask):
         self.reset_buf = torch.any(torch.norm(self.contact_forces[:, self.termination_contact_indices, :], dim=-1) > 1.,
                                    dim=1)
         self.time_out_buf = self.episode_length_buf > self.max_episode_length  # no terminal reward for time-outs
-        self.reach_goal_buf = self.root_states[:,0] > self.env_origins[:,0]
+        self.reach_goal_buf = torch.norm(self.root_states[:,:2] - self.env_origins[:,:2],dim=-1) < self.cfg.terrain.platform_size/3
         self.reset_buf |= self.time_out_buf
         self.reset_buf |= self.reach_goal_buf
         
@@ -904,7 +904,7 @@ class LeggedRobot(BaseTask):
         cycle_time = self.cfg.rewards.cycle_time
         phase = self.episode_length_buf * self.dt / cycle_time - torch.floor(self.episode_length_buf * self.dt / cycle_time) #将phase限制在0~1之间
         jump_cmd = (torch.norm(self.env_origins[:,:2] - self.root_states[:, :2], dim=1) < self.cfg.terrain.platform_size/2 + self.cfg.terrain.jump_threshold ) & (torch.norm(self.env_origins[:,:2] - self.root_states[:, :2], dim=1) > self.cfg.terrain.platform_size/2)
-        jump_cmd = (torch.norm(self.env_origins[:,:2] - self.root_states[:, :2], dim=1) < self.cfg.terrain.platform_size/2 + self.cfg.terrain.jump_threshold ) 
+        # jump_cmd = (torch.norm(self.env_origins[:,:2] - self.root_states[:, :2], dim=1) < self.cfg.terrain.platform_size/2 + self.cfg.terrain.jump_threshold ) 
         # jump_cmd = phase>=0.0
         return phase * jump_cmd.float() , jump_cmd
 
@@ -1259,6 +1259,7 @@ class LeggedRobot(BaseTask):
 
         # set small commands to zero
         self.commands[env_ids, :2] *= (torch.norm(self.commands[env_ids, :2], dim=1) > 0.2).unsqueeze(1)
+        self.commands[env_ids, 2] = 0
 
     def _update_jump_cmd(self, env_ids):
         
@@ -1332,7 +1333,9 @@ class LeggedRobot(BaseTask):
     def _reward_close_target(self):
         # Reward the robot for getting close to the target
         distance = torch.norm(self.root_states[:, :2] - self.env_origins[:,:2], dim=1)
-        rew = torch.exp(-distance * 0.5)
+        distance[distance<self.cfg.terrain.platform_size/2] = 0
+        distance[distance>=self.cfg.terrain.platform_size/2] = 10000
+        rew = torch.exp(-distance)
         return rew
 
     def _reward_jump_height(self):
@@ -1418,8 +1421,12 @@ class LeggedRobot(BaseTask):
         return torch.sum(1.*(torch.norm(self.contact_forces[:, self.penalised_contact_indices, :], dim=-1) > 0.1), dim=1)
     
     def _reward_termination(self):
-        # Terminal reward / penalty
-        return self.reset_buf * ~self.time_out_buf 
+        # Terminal reward / penalty 
+        return self.reset_buf * ~self.time_out_buf * ~self.reach_goal_buf
+    
+    def _reward_reach_goal(self):
+        return self.reach_goal_buf
+
     
     def _reward_dof_pos_limits(self):
         # Penalize dof positions too close to the limit

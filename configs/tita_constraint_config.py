@@ -132,6 +132,7 @@ class TitaConstraintRoughCfg( LeggedRobotCfg ):
             lin_vel_up = 6.4               
             lin_vel_z = 0.0
             joint_pos = 3.0
+            reach_goal = 200
 
 
     class domain_rand( LeggedRobotCfg.domain_rand):
@@ -251,7 +252,7 @@ class TitaConstraintRoughCfgPPO( LeggedRobotCfgPPO ):
         policy_class_name = 'ActorCriticBarlowTwins'
         runner_class_name = 'OnConstraintPolicyRunner'
         algorithm_class_name = 'NP3O'
-        max_iterations = 2000
+        max_iterations = 10000
         num_steps_per_env = 24
         resume = True
         resume_path = 'tita_example_10000.pt'
