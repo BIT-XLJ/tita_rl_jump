@@ -753,9 +753,9 @@ class LeggedRobot(BaseTask):
         self.reset_buf = torch.any(torch.norm(self.contact_forces[:, self.termination_contact_indices, :], dim=-1) > 1.,
                                    dim=1)
         self.time_out_buf = self.episode_length_buf > self.max_episode_length  # no terminal reward for time-outs
-        # self.reach_goal_buf = torch.norm(self.root_states[:, :2] - self.env_origins[:,:2], dim=-1) < self.cfg.terrain.reach_goal_threshold
+        self.reach_goal_buf = self.root_states[:,0] > self.env_origins[:,0]
         self.reset_buf |= self.time_out_buf
-        # self.reset_buf |= self.reach_goal_buf
+        self.reset_buf |= self.reach_goal_buf
         
     def compute_reward(self):
         """ Compute rewards
@@ -861,7 +861,7 @@ class LeggedRobot(BaseTask):
         # base position
         if self.custom_origins:
             self.root_states[env_ids] = self.base_init_state
-            self.root_states[env_ids, :3] += self.env_origins[env_ids]
+            self.root_states[env_ids, :2] += self.env_origins[env_ids,:2]
             rand_values = torch.rand(len(env_ids), device=self.device)
             self.root_states[env_ids, 0] -= 5.0 
             self.root_states[env_ids, 1] += 0.0
@@ -903,7 +903,9 @@ class LeggedRobot(BaseTask):
     def _get_phase(self):
         cycle_time = self.cfg.rewards.cycle_time
         phase = self.episode_length_buf * self.dt / cycle_time - torch.floor(self.episode_length_buf * self.dt / cycle_time) #将phase限制在0~1之间
-        jump_cmd = (self.episode_length_buf * self.dt / (cycle_time) - torch.floor(self.episode_length_buf * self.dt / (cycle_time))) >= 0.0
+        jump_cmd = (torch.norm(self.env_origins[:,:2] - self.root_states[:, :2], dim=1) < self.cfg.terrain.platform_size/2 + self.cfg.terrain.jump_threshold ) & (torch.norm(self.env_origins[:,:2] - self.root_states[:, :2], dim=1) > self.cfg.terrain.platform_size/2)
+        jump_cmd = (torch.norm(self.env_origins[:,:2] - self.root_states[:, :2], dim=1) < self.cfg.terrain.platform_size/2 + self.cfg.terrain.jump_threshold ) 
+        # jump_cmd = phase>=0.0
         return phase * jump_cmd.float() , jump_cmd
 
     def compute_ref_state(self):
@@ -914,21 +916,21 @@ class LeggedRobot(BaseTask):
         new_dof_pos = torch.zeros_like(self.dof_pos)
         # 为每个关节生成正弦波位置
         self.ref_dof_pos[jump_cmd,0] = 0.0
-        self.ref_dof_pos[jump_cmd,1] = 1.1
-        self.ref_dof_pos[jump_cmd,2] = -2.1
+        self.ref_dof_pos[jump_cmd,1] = 1.4
+        self.ref_dof_pos[jump_cmd,2] = -2.7
         self.ref_dof_pos[jump_cmd,3] = 0.0
         self.ref_dof_pos[jump_cmd,4] = 0.0
-        self.ref_dof_pos[jump_cmd,5] = 1.1
-        self.ref_dof_pos[jump_cmd,6] = -2.1
+        self.ref_dof_pos[jump_cmd,5] = 1.4
+        self.ref_dof_pos[jump_cmd,6] = -2.7
         self.ref_dof_pos[jump_cmd,7] = 0.0
         
         self.ref_dof_pos[~jump_cmd,0] = 0.0
-        self.ref_dof_pos[~jump_cmd,1] = 0.8
-        self.ref_dof_pos[~jump_cmd,2] = -1.5
+        self.ref_dof_pos[~jump_cmd,1] = 1.4
+        self.ref_dof_pos[~jump_cmd,2] = -2.7
         self.ref_dof_pos[~jump_cmd,3] = 0.0
         self.ref_dof_pos[~jump_cmd,4] = 0.0
-        self.ref_dof_pos[~jump_cmd,5] = 0.8
-        self.ref_dof_pos[~jump_cmd,6] = -1.5
+        self.ref_dof_pos[~jump_cmd,5] = 1.4
+        self.ref_dof_pos[~jump_cmd,6] = -2.7
         self.ref_dof_pos[~jump_cmd,7] = 0.0
 
         scale_1 = self.cfg.rewards.target_joint_pos_scale  #0.7
@@ -1329,8 +1331,8 @@ class LeggedRobot(BaseTask):
     
     def _reward_close_target(self):
         # Reward the robot for getting close to the target
-        # distance = torch.norm(self.root_states[:, :2] - self.env_origins[:,:2], dim=1)
-        rew = self.reach_goal_buf
+        distance = torch.norm(self.root_states[:, :2] - self.env_origins[:,:2], dim=1)
+        rew = torch.exp(-distance * 0.5)
         return rew
 
     def _reward_jump_height(self):

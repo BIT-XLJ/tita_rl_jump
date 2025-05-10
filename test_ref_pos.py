@@ -96,10 +96,10 @@ while not gym.query_viewer_has_closed(viewer):
     
     # 为每个关节生成正弦波位置
     new_dof_pos = np.zeros(num_dofs, dtype=np.float32)
-    new_dof_pos[1] = 1.1
-    new_dof_pos[2] = -2.1
-    new_dof_pos[5] = 1.1
-    new_dof_pos[6] = -2.1
+    new_dof_pos[1] = 1.4
+    new_dof_pos[2] = -2.7
+    new_dof_pos[5] = 1.4
+    new_dof_pos[6] = -2.7
 
     phase =  torch.tensor(t / cycle_time - torch.floor(torch.tensor(t / cycle_time)))
     sin_pos = torch.sin(2 * torch.pi * phase)

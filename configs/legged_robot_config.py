@@ -78,10 +78,10 @@ class LeggedRobotCfg(BaseConfig):
         # trimesh only:
         slope_treshold = 0.75  # slopes above this threshold will be corrected to vertical surfaces
         num_goals = 1
-        platform_size = 3.0  # [m]
+        platform_size = 4.0  # [m]
         reach_goal_threshold = 0.2  # [m]
-        step_height = 0.0  # [m]
-        jump_threshold = 0.5 # [m],距离高台jump_threshold开始跳跃
+        step_height = 0.10  # [m]
+        jump_threshold = 1.0 # [m],距离高台jump_threshold开始跳跃
 
     class commands:
         curriculum = False
@@ -169,7 +169,7 @@ class LeggedRobotCfg(BaseConfig):
     class rewards:
         feet_air_time_target = 1.2 # 滞空时间
         cycle_time = 0.64
-        target_joint_pos_scale = 0.6
+        target_joint_pos_scale = 0.8
         class scales:
             termination = -0.0
             tracking_lin_vel = 1.0
