@@ -916,21 +916,21 @@ class LeggedRobot(BaseTask):
         new_dof_pos = torch.zeros_like(self.dof_pos)
         # 为每个关节生成正弦波位置
         self.ref_dof_pos[jump_cmd,0] = 0.0
-        self.ref_dof_pos[jump_cmd,1] = 1.4
-        self.ref_dof_pos[jump_cmd,2] = -2.7
+        self.ref_dof_pos[jump_cmd,1] = 1.3
+        self.ref_dof_pos[jump_cmd,2] = -2.5
         self.ref_dof_pos[jump_cmd,3] = 0.0
         self.ref_dof_pos[jump_cmd,4] = 0.0
-        self.ref_dof_pos[jump_cmd,5] = 1.4
-        self.ref_dof_pos[jump_cmd,6] = -2.7
+        self.ref_dof_pos[jump_cmd,5] = 1.3
+        self.ref_dof_pos[jump_cmd,6] = -2.5
         self.ref_dof_pos[jump_cmd,7] = 0.0
         
         self.ref_dof_pos[~jump_cmd,0] = 0.0
-        self.ref_dof_pos[~jump_cmd,1] = 1.4
-        self.ref_dof_pos[~jump_cmd,2] = -2.7
+        self.ref_dof_pos[~jump_cmd,1] = 1.3
+        self.ref_dof_pos[~jump_cmd,2] = -2.5
         self.ref_dof_pos[~jump_cmd,3] = 0.0
         self.ref_dof_pos[~jump_cmd,4] = 0.0
-        self.ref_dof_pos[~jump_cmd,5] = 1.4
-        self.ref_dof_pos[~jump_cmd,6] = -2.7
+        self.ref_dof_pos[~jump_cmd,5] = 1.3
+        self.ref_dof_pos[~jump_cmd,6] = -2.5
         self.ref_dof_pos[~jump_cmd,7] = 0.0
 
         scale_1 = self.cfg.rewards.target_joint_pos_scale  #0.7
