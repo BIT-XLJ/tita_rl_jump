@@ -14,7 +14,7 @@ class LeggedRobotCfg(BaseConfig):
         num_actions = 8
         env_spacing = 3.  # not used with heightfields/trimeshes 
         send_timeouts = True # send time out information to the algorithm
-        episode_length_s = 20 # episode length in seconds
+        episode_length_s = 10 # episode length in seconds
 
         history_encoding = True
 
@@ -80,7 +80,7 @@ class LeggedRobotCfg(BaseConfig):
         num_goals = 1
         platform_size = 4.0  # [m]
         reach_goal_threshold = 0.2  # [m]
-        step_height = 0.4 # [m]
+        step_height = 0.2 # [m]
         jump_threshold = 0.6 # [m],距离高台jump_threshold开始跳跃
 
     class commands:
