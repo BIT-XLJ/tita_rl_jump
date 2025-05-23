@@ -83,7 +83,7 @@ class TitaConstraintRoughCfg( LeggedRobotCfg ):
         global_reference = False
 
         class ranges:
-            lin_vel_x = [0, 2.0]  # min max [m/s]
+            lin_vel_x = [0, 1.0]  # min max [m/s]
             lin_vel_y = [-0.01, 0.01]  # min max [m/s]
             # lin_vel_z = [0.0, 1.0]  # min max [m/s]
             ang_vel_yaw = [-0.01, 0.01]  # min max [rad/s]
@@ -94,8 +94,8 @@ class TitaConstraintRoughCfg( LeggedRobotCfg ):
         file = '{ROOT_DIR}/resources/tita/urdf/tita_description.urdf'
         foot_name = "leg_4"
         name = "tita"
-        penalize_contacts_on = ["leg_3"]
-        terminate_after_contacts_on = ["base","leg_2","leg_3"]
+        penalize_contacts_on = ["leg_3","leg_2"]
+        terminate_after_contacts_on = [] #"base","leg_2","leg_3"
         self_collisions = 0 # 1 to disable, 0 to enable...bitwise filter
         flip_visual_attachments = False
   
@@ -108,7 +108,7 @@ class TitaConstraintRoughCfg( LeggedRobotCfg ):
             powers = -2e-5
             termination = -200
             tracking_lin_vel = 5.0 #5.5
-            tracking_ang_vel = 2.0
+            tracking_ang_vel = 5.0 #2.0
             lin_vel_z = -0.0
             ang_vel_xy = -0.05
             dof_vel = 0.0
