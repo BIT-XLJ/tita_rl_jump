@@ -311,6 +311,8 @@ class LeggedRobot(BaseTask):
         for i in range(len(termination_contact_names)):
             self.termination_contact_indices[i] = self.gym.find_actor_rigid_body_handle(self.envs[0], self.actor_handles[0], termination_contact_names[i])
 
+        self.base = self.gym.find_actor_rigid_body_handle(self.envs[0], self.actor_handles[0], self.cfg.asset.base_name)
+
         self.jump_air_time = torch.zeros(self.num_envs, dtype=torch.float, device=self.device, requires_grad=False) #用于记录腾空时间
         self.jump_bit_lock = torch.zeros(self.num_envs, dtype=torch.bool, device=self.device, requires_grad=False) #用于保证跳跃指令只会触发一次
 
@@ -480,7 +482,7 @@ class LeggedRobot(BaseTask):
         # compute observations, rewards, resets, ...
         self.check_termination()
         
-        # self.compute_jump_time()
+        self.compute_jump_time()
         self.compute_reward()
         self.compute_cost()
         env_ids = self.reset_buf.nonzero(as_tuple=False).flatten()
@@ -575,11 +577,12 @@ class LeggedRobot(BaseTask):
         self.gym.viewer_camera_look_at(self.viewer, None, cam_pos, cam_target)
     
     def compute_jump_time(self):
-        reset_mask = self.jump_air_time[:] >= self.cfg.rewards.feet_air_time_target   #滞空时间大于最大限制，重置
+        reset_mask = self.jump_air_time[:] >= self.cfg.rewards.cycle_time     #滞空时间大于最大限制，重置
         self.jump_air_time[reset_mask] = 0.0
-        self.commands[reset_mask, 4] = 0.0  #重置跳跃命令
-        mask = self.commands[:, 4] > 0.5  #跳跃掩码
-        self.jump_air_time[mask] += self.dt 
+        self.jump_bit_lock[reset_mask] = False #关闭跳跃锁
+        mask = torch.norm(self.contact_forces[:, self.base, :2], dim=-1) > 1.0
+        self.jump_bit_lock[mask] = True        #打开跳跃锁
+        self.jump_air_time[self.jump_bit_lock] += self.dt 
 
 
     def _post_physics_step_callback(self):
@@ -750,12 +753,14 @@ class LeggedRobot(BaseTask):
     def check_termination(self):
         """ Check if environments need to be reset
         """
-        self.reset_buf = torch.any(torch.norm(self.contact_forces[:, self.termination_contact_indices, :], dim=-1) > 1.,
+        self.reset_buf = torch.any(torch.norm(self.contact_forces[:, self.termination_contact_indices,:], dim=-1) > 1.,
                                    dim=1)
+        # self.base_reset_buf = torch.abs(self.contact_forces[:, self.base, 2]) > 10.0 # base xy 方向的接触力不会导致重置
         self.time_out_buf = self.episode_length_buf > self.max_episode_length  # no terminal reward for time-outs
-        self.reach_goal_buf = torch.norm(self.root_states[:,:2] - self.env_origins[:,:2],dim=-1) < self.cfg.terrain.platform_size/3
+        # self.reach_goal_buf = torch.norm(self.root_states[:,:2] - self.env_origins[:,:2],dim=-1) < self.cfg.terrain.platform_size/3
         self.reset_buf |= self.time_out_buf
-        self.reset_buf |= self.reach_goal_buf
+        # self.reset_buf |= self.base_reset_buf
+        # self.reset_buf |= self.reach_goal_buf
         
     def compute_reward(self):
         """ Compute rewards
@@ -902,11 +907,9 @@ class LeggedRobot(BaseTask):
 
     def _get_phase(self):
         cycle_time = self.cfg.rewards.cycle_time
-        phase = self.episode_length_buf * self.dt / cycle_time - torch.floor(self.episode_length_buf * self.dt / cycle_time) #将phase限制在0~1之间
-        jump_cmd = (torch.norm(self.env_origins[:,:2] - self.root_states[:, :2], dim=1) < self.cfg.terrain.platform_size/2 + self.cfg.terrain.jump_threshold ) & (torch.norm(self.env_origins[:,:2] - self.root_states[:, :2], dim=1) > self.cfg.terrain.platform_size/2)
-        # jump_cmd = (torch.norm(self.env_origins[:,:2] - self.root_states[:, :2], dim=1) < self.cfg.terrain.platform_size/2 + self.cfg.terrain.jump_threshold ) 
-        # jump_cmd = phase>=0.0
-        return phase * jump_cmd.float() , jump_cmd
+        phase = self.jump_air_time / cycle_time
+        jump_cmd = self.jump_bit_lock.clone()
+        return phase , jump_cmd
 
     def compute_ref_state(self):
         phase,jump_cmd = self._get_phase()
@@ -938,13 +941,13 @@ class LeggedRobot(BaseTask):
 
         # sin_pos_l = torch.where(sin_pos_l < 0.0, torch.tensor(0.0), sin_pos_l)
         sin_pos_l[phase > 0.25] = 0
-        new_dof_pos[:,1] = sin_pos_l * scale_1
-        new_dof_pos[:,2] = sin_pos_l * scale_2
+        new_dof_pos[jump_cmd,1] = sin_pos_l[jump_cmd] * scale_1
+        new_dof_pos[jump_cmd,2] = sin_pos_l[jump_cmd] * scale_2
         
         # sin_pos_r = torch.where(sin_pos_r < 0.0, torch.tensor(0.0), sin_pos_r)
         sin_pos_r[phase > 0.25] = 0
-        new_dof_pos[:,5] = sin_pos_r * scale_1
-        new_dof_pos[:,6] = sin_pos_r * scale_2
+        new_dof_pos[jump_cmd,5] = sin_pos_r[jump_cmd] * scale_1
+        new_dof_pos[jump_cmd,6] = sin_pos_r[jump_cmd] * scale_2
         
         self.ref_dof_pos -= new_dof_pos
 
@@ -1422,10 +1425,10 @@ class LeggedRobot(BaseTask):
     
     def _reward_termination(self):
         # Terminal reward / penalty 
-        return self.reset_buf * ~self.time_out_buf * ~self.reach_goal_buf
+        return self.reset_buf * ~self.time_out_buf 
     
-    def _reward_reach_goal(self):
-        return self.reach_goal_buf
+    # def _reward_reach_goal(self):
+    #     return self.reach_goal_buf
 
     
     def _reward_dof_pos_limits(self):
