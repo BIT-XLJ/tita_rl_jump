@@ -80,7 +80,7 @@ class LeggedRobotCfg(BaseConfig):
         num_goals = 1
         platform_size = 4.0  # [m]
         reach_goal_threshold = 0.2  # [m]
-        step_height = 0.15 # [m]
+        step_height = 0.25 # [m]
         jump_threshold = 0.6 # [m],距离高台jump_threshold开始跳跃
 
     class commands:
@@ -125,6 +125,7 @@ class LeggedRobotCfg(BaseConfig):
         name = "legged_robot"  # actor name
         foot_name = "None"  # name of the feet bodies, used to index body state and contact force tensors
         base_name = "base"
+        contact_tolerance_name = "down_link"
         penalize_contacts_on = []
         terminate_after_contacts_on = []
         disable_gravity = False

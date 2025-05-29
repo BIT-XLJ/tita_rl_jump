@@ -310,6 +310,8 @@ class LeggedRobot(BaseTask):
         self.termination_contact_indices = torch.zeros(len(termination_contact_names), dtype=torch.long, device=self.device, requires_grad=False)
         for i in range(len(termination_contact_names)):
             self.termination_contact_indices[i] = self.gym.find_actor_rigid_body_handle(self.envs[0], self.actor_handles[0], termination_contact_names[i])
+        
+        self.contact_tolerance_index = self.gym.find_actor_rigid_body_handle(self.envs[0], self.actor_handles[0], self.cfg.asset.contact_tolerance_name)
 
         self.base = self.gym.find_actor_rigid_body_handle(self.envs[0], self.actor_handles[0], self.cfg.asset.base_name)
 
@@ -376,7 +378,7 @@ class LeggedRobot(BaseTask):
 
         stance_mask = self._get_gait_phase()
         
-        diff = self.dof_pos - self.ref_dof_pos
+        diff = (self.dof_pos - self.ref_dof_pos) * 0.0
 
         obs_buf =torch.cat((self.base_ang_vel  * self.obs_scales.ang_vel,
                             self.projected_gravity,
@@ -482,7 +484,7 @@ class LeggedRobot(BaseTask):
         # compute observations, rewards, resets, ...
         self.check_termination()
         
-        self.compute_jump_time()
+        # self.compute_jump_time()
         self.compute_reward()
         self.compute_cost()
         env_ids = self.reset_buf.nonzero(as_tuple=False).flatten()
@@ -1368,8 +1370,15 @@ class LeggedRobot(BaseTask):
         return self.fly_time * (self.commands[:, 2] > 0.1) #no reward for zero command,奖励同时跳跃
 
     def _reward_lin_vel_up(self):
-        phase,jump_cmd = self._get_phase()
-        mask = torch.logical_and(phase>0 , phase<=0.25)
+        # phase,jump_cmd = self._get_phase()
+        # mask = torch.logical_and(phase>0 , phase<=0.25)
+        # self.base_vel_rew[mask] = self.base_lin_vel[mask, 2]
+        # self.base_vel_rew[~mask] = 0.0
+        # self.base_vel_rew[:] = self.base_lin_vel[:, 2]
+        # self.base_vel_rew[~mask] = 0.0
+        mask1 = torch.norm(self.contact_forces[:, self.feet_indices[0], :2], dim=1) > 1.0 
+        mask2 = torch.norm(self.contact_forces[:, self.feet_indices[1], :2], dim=1) > 1.0
+        mask = mask1 & mask2
         self.base_vel_rew[mask] = self.base_lin_vel[mask, 2]
         self.base_vel_rew[~mask] = 0.0
         return torch.square(self.base_vel_rew) #鼓励z轴线速度向上，z轴线速度越大，奖励越大

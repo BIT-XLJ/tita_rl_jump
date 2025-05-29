@@ -31,7 +31,7 @@
   <material name="white">
     <color rgba="1.0 1.0 1.0 1.0"/>
   </material>
-    <link name="base_link">
+  <link name="base_link">
     <inertial>
       <origin rpy="0 0 0" xyz="0.020452 3.5457E-06 0.01871"/>
       <mass value="13.2"/>
@@ -56,7 +56,6 @@
       </geometry>
     </collision>
   </link>
-
   <link name="spad">
     </link>
   <joint name="spad" type="fixed">
@@ -330,31 +329,3 @@
     <limit effort="15" lower="-999999" upper="999999" velocity="20"/>
   </joint>
 </robot>
-
-  <!-- <link name="down_link">
-    <inertial>
-      <origin rpy="0 0 0" xyz="0.020452 3.5457E-06 0.01871"/>
-      <mass value="0.001"/>  <!-- 很小的质量 -->
-      <inertia ixx="0.0001" ixy="0" ixz="0" iyy="0.0001" iyz="0" izz="0.0001"/>
-    </inertial>
-    <collision>
-      <origin rpy="0 0 0" xyz="0 0 0.0"/>
-      <geometry>
-        <box size="0.47 0.3 0.03"/>
-      </geometry>
-    </collision>
-    <visual>
-      <origin rpy="0 0 0" xyz="0 0 0"/>
-      <geometry>
-        <box size="0.47 0.3 0.03"/>
-      </geometry>
-    </visual>
-  </link>
-
-  <joint name="down_collison_joint" type="fixed">
-    <origin rpy="0 0 0" xyz="0 0 -0.078"/>
-    <parent link="base_link"/>
-    <child link="down_link"/>
-    <axis xyz="0 0 0"/>
-    <dont_collapse value="true"/>
-  </joint> -->
