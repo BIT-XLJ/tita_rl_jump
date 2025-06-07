@@ -29,7 +29,7 @@ class CnnActor(nn.Module):
         self.num_prop = num_prop
         self.num_hist = num_hist
         self.num_actions = num_actions
-        self.priv_encoder_output_dim = priv_encoder_output_dim
+        self.priv_encoder_output_dim = priv_encoder_output_dim #这个是历史信息编码后的隐空间的维度 
         self.activation = activation
         self.history_encoder = StateHistoryEncoder(activation, num_prop, num_hist, priv_encoder_output_dim)
         self.actor_layers = mlp_factory(activation,num_prop+priv_encoder_output_dim,num_actions,actor_hidden_dims,last_act=False)
@@ -381,7 +381,7 @@ class ActorCriticRMA(nn.Module):
         self.history_encoder = StateHistoryEncoder(activation, num_prop, num_hist, 32)
         # actor_teacher_layers = mlp_factory(activation,num_prop+priv_encoder_output_dim+self.scan_encoder_output_dim,num_actions,actor_hidden_dims,last_act=False)
         actor_teacher_layers = mlp_factory(activation,num_prop+priv_encoder_output_dim+32,num_actions,actor_hidden_dims,last_act=False)
-
+        #教师网络包含了历史信息编码器和隐空间编码器还有学生网络的观测输入，但是不包含高程点
         self.actor_teacher_backbone = nn.Sequential(*actor_teacher_layers)
         self.actor_student_backbone = CnnActor(num_prop=num_prop,
                                                num_hist=num_hist,
@@ -390,7 +390,7 @@ class ActorCriticRMA(nn.Module):
                                                actor_hidden_dims=actor_hidden_dims,
                                                activation=activation)
 
-        # Value function
+        # Value function，在教师网络的基础上增加了高程点编码
         critic_layers = mlp_factory(activation,num_prop+self.scan_encoder_output_dim+priv_encoder_output_dim+32,1,critic_hidden_dims,last_act=False)
         self.critic = nn.Sequential(*critic_layers)
 

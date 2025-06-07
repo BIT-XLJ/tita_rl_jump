@@ -1382,6 +1382,19 @@ class LeggedRobot(BaseTask):
         self.base_vel_rew[mask] = self.base_lin_vel[mask, 2]
         self.base_vel_rew[~mask] = 0.0
         return torch.square(self.base_vel_rew) #鼓励z轴线速度向上，z轴线速度越大，奖励越大
+    
+    def _reward_jump_forward_vel(self):
+        mask = self.root_states[:,2] > self.cfg.rewards.base_height_target
+        self.base_vel_rew[~mask] = 0.0
+        self.base_vel_rew[mask] = self.base_lin_vel[mask, 0]
+        return self.base_vel_rew
+    
+    def _reward_feet_jump_height(self):
+        mask = self.root_states[:,2] > self.cfg.rewards.base_height_target 
+        distance = (torch.abs(self.root_states[:,2] - self.rigid_body_states[:, self.feet_indices[0], 2]) + \
+        torch.abs(self.root_states[:,2] - self.rigid_body_states[:, self.feet_indices[1], 2])) / 2
+        distance[~mask] = 0.0
+        return distance
 
     def _reward_lin_vel_z(self):
         # Penalize z axis base linear velocity
