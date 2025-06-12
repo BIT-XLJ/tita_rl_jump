@@ -367,18 +367,8 @@ class LeggedRobot(BaseTask):
     
     def compute_observations(self):
         self.dof_pos[:,[3, 7]]  = 0 
-        phase,jump_cmd = self._get_phase()
-        self.compute_ref_state()
 
-        sin_pos = torch.sin(2 * torch.pi * phase).unsqueeze(1)
-        cos_pos = torch.cos(2 * torch.pi * phase).unsqueeze(1)
-        
-        self.command_input = torch.cat(
-            (sin_pos, cos_pos, self.commands[:, :3] * self.commands_scale), dim=1)
-
-        stance_mask = self._get_gait_phase()
-        
-        diff = (self.dof_pos - self.ref_dof_pos) * 0.0
+        self.command_input = self.commands[:, :3] * self.commands_scale
 
         obs_buf =torch.cat((self.base_ang_vel  * self.obs_scales.ang_vel,
                             self.projected_gravity,
@@ -393,7 +383,7 @@ class LeggedRobot(BaseTask):
         noise_level = self.cfg.noise.noise_level
         noise_vec = torch.cat((torch.ones(3) * noise_scales.ang_vel * noise_level,
                                torch.ones(3) * noise_scales.gravity * noise_level,
-                               torch.zeros(5),
+                               torch.zeros(3),
                                torch.ones(
                                    8) * noise_scales.dof_pos * noise_level * self.obs_scales.dof_pos,
                                torch.ones(
@@ -409,8 +399,6 @@ class LeggedRobot(BaseTask):
         priv_latent = torch.cat((    #在这里加上特权观测，相位，支撑掩码（已经有触地掩码了）
             self.base_lin_vel * self.obs_scales.lin_vel,  # 3
             self.reindex_feet(self.contact_filt.float()-0.5), #2
-            self.reindex_feet(stance_mask.float()), #2
-            self.reindex(diff), #8
             self.randomized_lag_tensor, #1
             #self.base_ang_vel  * self.obs_scales.ang_vel,
             # self.base_lin_vel * self.obs_scales.lin_vel,
@@ -1380,6 +1368,14 @@ class LeggedRobot(BaseTask):
         mask2 = torch.norm(self.contact_forces[:, self.feet_indices[1], :2], dim=1) > 1.0
         mask = mask1 & mask2
         self.base_vel_rew[mask] = self.base_lin_vel[mask, 2]
+        self.base_vel_rew[~mask] = 0.0
+        return torch.square(self.base_vel_rew) #鼓励z轴线速度向上，z轴线速度越大，奖励越大
+    
+    def _reward_lin_vel_forward(self):
+        mask1 = torch.norm(self.contact_forces[:, self.feet_indices[0], :2], dim=1) > 1.0 
+        mask2 = torch.norm(self.contact_forces[:, self.feet_indices[1], :2], dim=1) > 1.0
+        mask = mask1 & mask2
+        self.base_vel_rew[mask] = self.base_lin_vel[mask, 0]
         self.base_vel_rew[~mask] = 0.0
         return torch.square(self.base_vel_rew) #鼓励z轴线速度向上，z轴线速度越大，奖励越大
 

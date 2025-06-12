@@ -35,13 +35,13 @@ class TitaConstraintRoughCfg( LeggedRobotCfg ):
         num_envs = 4096
 
         n_scan = 187
-        n_priv_latent =  4 + 1 + 8 + 8 + 8 + 6 + 1 + 2 + 1 - 3 + 8 + 2
-        n_proprio = 35 
+        n_priv_latent =  4 + 1 + 8 + 8 + 8 + 6 + 1 + 2 + 1 - 3 
+        n_proprio = 33 
         history_len = 10
         num_observations = n_proprio + n_scan + history_len*n_proprio + n_priv_latent
 
     class init_state( LeggedRobotCfg.init_state ):
-        pos = [0.0, 0.0, 0.5] # x,y,z [m]
+        pos = [0.0, 0.0, 0.4] # x,y,z [m]
         rot = [0, 0.0, 0.0, 1]  # x, y, z, w [quat]
         lin_vel = [0.0, 0.0, 0.0]  # x, y, z [m/s]
         ang_vel = [0.0, 0.0, 0.0]  # x, y, z [rad/s]       
@@ -103,7 +103,7 @@ class TitaConstraintRoughCfg( LeggedRobotCfg ):
   
     class rewards( LeggedRobotCfg.rewards ):
         soft_dof_pos_limit = 0.9
-        base_height_target = 0.5  #0.35
+        base_height_target = 0.4  #0.35
         cycle_time = 1.2
         class scales( LeggedRobotCfg.rewards.scales ):
             torques = 0.0
@@ -122,7 +122,7 @@ class TitaConstraintRoughCfg( LeggedRobotCfg ):
             action_smoothness= 0
             stand_still = 0.0
             foot_clearance= -0.0
-            orientation=-1.0
+            orientation=-1.0      # -1
             tracking_goal_vel = 0.0   
             jump_height = 0.0         #鼓励跳跃,2.0
             tracking_yaw = 0.0         #10,1.0
@@ -131,7 +131,8 @@ class TitaConstraintRoughCfg( LeggedRobotCfg ):
             feet_contact_forces = 0.0     # 0.0
             #########################
             feet_air_time = 0.0
-            lin_vel_up = 5.0             
+            lin_vel_up = 5.0   
+            lin_vel_forward = 5.0          
             lin_vel_z = 0.0
             joint_pos = 0.0  # 8.0
             # reach_goal = 200
