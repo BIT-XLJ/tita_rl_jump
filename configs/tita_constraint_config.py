@@ -126,7 +126,7 @@ class TitaConstraintRoughCfg( LeggedRobotCfg ):
             tracking_goal_vel = 0.0   
             jump_height = 0.0         #鼓励跳跃,2.0
             tracking_yaw = 0.0         #10,1.0
-            close_target = 8000.0          # 0.0
+            close_target = 400.0          # 0.0
             jump = 0.0                   # 2.0
             feet_contact_forces = 0.0     # 0.0
             #########################
@@ -136,6 +136,7 @@ class TitaConstraintRoughCfg( LeggedRobotCfg ):
             lin_vel_z = 0.0
             joint_pos = 0.0  # 8.0
             symmetric = 0.1
+            jump_orientation = 1.5
             # reach_goal = 200
 
 
@@ -256,7 +257,7 @@ class TitaConstraintRoughCfgPPO( LeggedRobotCfgPPO ):
         policy_class_name = 'ActorCriticBarlowTwins'
         runner_class_name = 'OnConstraintPolicyRunner'
         algorithm_class_name = 'NP3O'
-        max_iterations = 20000
+        max_iterations = 3000
         num_steps_per_env = 24
         resume = True
         resume_path = 'tita_example_10000.pt'

@@ -95,7 +95,7 @@ def play_on_constraint_policy_runner(args):
 
     img_idx = 0
 
-    video_duration = 40
+    video_duration = 60
     num_frames = int(video_duration / env.dt)
     print(f'gathering {num_frames} frames')
     video = None

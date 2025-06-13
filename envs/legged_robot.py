@@ -1384,6 +1384,15 @@ class LeggedRobot(BaseTask):
         self.base_vel_rew[~mask] = 0.0
         return torch.square(self.base_vel_rew) #鼓励z轴线速度向上，z轴线速度越大，奖励越大
     
+    def _reward_jump_orientation(self):
+        mask1 = torch.norm(self.contact_forces[:, self.feet_indices[0], :2], dim=1) > 1.0 
+        mask2 = torch.norm(self.contact_forces[:, self.feet_indices[1], :2], dim=1) > 1.0
+        mask = mask1 & mask2
+        diff = torch.exp(-torch.abs(np.pi/6 - self.pitch))
+        diff[~mask] = 0.0
+        return diff
+
+
     def _reward_symmetric(self):
         # Reward symmetric joint positions
         # penalize left and right legs to be different
