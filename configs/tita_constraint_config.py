@@ -63,7 +63,7 @@ class TitaConstraintRoughCfg( LeggedRobotCfg ):
     class control( LeggedRobotCfg.control ):
         # PD Drive parameters:
         control_type = 'P'
-        stiffness = {'joint': 60}  # [N*m/rad]
+        stiffness = {'joint': 80}  # [N*m/rad]
         damping = {'joint': 1.0}     # [N*m*s/rad]
         # action scale: target angle = actionScale * action + defaultAngle
         action_scale = 0.5
@@ -83,7 +83,7 @@ class TitaConstraintRoughCfg( LeggedRobotCfg ):
         global_reference = False
 
         class ranges:
-            lin_vel_x = [0, 1.0]  # min max [m/s]
+            lin_vel_x = [1.0, 2.0]  # min max [m/s]
             lin_vel_y = [-0.01, 0.01]  # min max [m/s]
             # lin_vel_z = [0.0, 1.0]  # min max [m/s]
             ang_vel_yaw = [-0.01, 0.01]  # min max [rad/s]
@@ -96,7 +96,7 @@ class TitaConstraintRoughCfg( LeggedRobotCfg ):
         base_name = "base_link"
         name = "tita"
         contact_tolerance_name = "down_link"
-        penalize_contacts_on = ["leg_3","leg_2","base"]
+        penalize_contacts_on = ["leg_3","leg_2"]
         terminate_after_contacts_on = [] #"base","leg_2","leg_3"
         self_collisions = 0 # 1 to disable, 0 to enable...bitwise filter
         flip_visual_attachments = False
@@ -115,26 +115,27 @@ class TitaConstraintRoughCfg( LeggedRobotCfg ):
             ang_vel_xy = -0.05
             dof_vel = 0.0
             dof_acc = -2.5e-7
-            base_height = -3.0
+            base_height = -1.0        #-3.0
             collision = -1.0
             feet_stumble = 0.0
             action_rate = -0.01
             action_smoothness= 0
             stand_still = 0.0
             foot_clearance= -0.0
-            orientation=-1.0      # -1
+            orientation=-1      # -1
             tracking_goal_vel = 0.0   
             jump_height = 0.0         #鼓励跳跃,2.0
             tracking_yaw = 0.0         #10,1.0
-            close_target = 0.0          # 0.0
+            close_target = 8000.0          # 0.0
             jump = 0.0                   # 2.0
             feet_contact_forces = 0.0     # 0.0
             #########################
             feet_air_time = 0.0
             lin_vel_up = 5.0   
-            lin_vel_forward = 5.0          
+            lin_vel_forward = 5.0     #5.0       
             lin_vel_z = 0.0
             joint_pos = 0.0  # 8.0
+            symmetric = 0.1
             # reach_goal = 200
 
 
@@ -255,7 +256,7 @@ class TitaConstraintRoughCfgPPO( LeggedRobotCfgPPO ):
         policy_class_name = 'ActorCriticBarlowTwins'
         runner_class_name = 'OnConstraintPolicyRunner'
         algorithm_class_name = 'NP3O'
-        max_iterations = 10000
+        max_iterations = 20000
         num_steps_per_env = 24
         resume = True
         resume_path = 'tita_example_10000.pt'

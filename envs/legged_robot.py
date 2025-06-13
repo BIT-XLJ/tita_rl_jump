@@ -155,6 +155,7 @@ class LeggedRobot(BaseTask):
         self.base_ang_vel = quat_rotate_inverse(self.base_quat, self.root_states[:, 10:13])
         self.projected_gravity = quat_rotate_inverse(self.base_quat, self.gravity_vec)
         self.base_vel_rew = torch.zeros(self.num_envs, dtype=torch.float, device=self.device, requires_grad=False)
+        self.reach_goal_already = torch.zeros(self.num_envs, dtype=torch.bool, device=self.device, requires_grad=False)
         if self.cfg.terrain.measure_heights:
             self.height_points = self._init_height_points()
         self.measured_heights = 0
@@ -803,6 +804,7 @@ class LeggedRobot(BaseTask):
         self._reset_root_states(env_ids)
         self._resample_commands(env_ids)
         self.jump_bit_lock[env_ids] = False  #reset之后，跳跃比特锁要重置为False
+        self.reach_goal_already[env_ids] = False # reset reach goal already flag
         # self._update_jump_cmd()
 
         # reset buffers
@@ -1282,9 +1284,9 @@ class LeggedRobot(BaseTask):
             return
         distance = torch.norm(self.root_states[env_ids, :2] - self.env_origins[env_ids, :2], dim=1)
         # robots that walked far enough progress to harder terains
-        move_up = (distance <= self.cfg.terrain.platform_size / 2)
+        move_up = self.root_states[env_ids, 0] > self.env_origins[env_ids, 0]
         # robots that walked less than half of their required distance go to simpler terrains
-        move_down = (distance > self.cfg.terrain.platform_size / 2)
+        move_down =  self.root_states[env_ids, 0] < self.env_origins[env_ids, 0]
         self.terrain_levels[env_ids] += 1 * move_up - 1 * move_down
         # Robots that solve the last level are sent to a random one
         self.terrain_levels[env_ids] = torch.where(self.terrain_levels[env_ids]>=self.max_terrain_level,
@@ -1326,9 +1328,12 @@ class LeggedRobot(BaseTask):
     def _reward_close_target(self):
         # Reward the robot for getting close to the target
         distance = torch.norm(self.root_states[:, :2] - self.env_origins[:,:2], dim=1)
-        distance[distance<self.cfg.terrain.platform_size/2] = 0
-        distance[distance>=self.cfg.terrain.platform_size/2] = 10000
-        rew = torch.exp(-distance)
+        mask = distance<self.cfg.terrain.platform_size/3
+        rew = torch.zeros_like(distance, device=self.device)
+        rew[mask] = 1.0
+        rew[~mask] = 0.0
+        rew[self.reach_goal_already] = 0.0  #如果已经到达目标，则不再奖励
+        self.reach_goal_already[mask] = True  #记录已经到达目标的环境
         return rew
 
     def _reward_jump_height(self):
@@ -1378,6 +1383,13 @@ class LeggedRobot(BaseTask):
         self.base_vel_rew[mask] = self.base_lin_vel[mask, 0]
         self.base_vel_rew[~mask] = 0.0
         return torch.square(self.base_vel_rew) #鼓励z轴线速度向上，z轴线速度越大，奖励越大
+    
+    def _reward_symmetric(self):
+        # Reward symmetric joint positions
+        # penalize left and right legs to be different
+        diff = self.dof_pos[:, [0, 1, 2]] - self.dof_pos[:, [4, 5, 6]]
+        diff = torch.abs(diff)
+        return torch.exp(-torch.sum(diff, dim=1)) # sum of absolute differences between left and right legs
 
     def _reward_lin_vel_z(self):
         # Penalize z axis base linear velocity
