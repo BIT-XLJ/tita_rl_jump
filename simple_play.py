@@ -115,7 +115,7 @@ def play_on_constraint_policy_runner(args):
         z_vel += torch.square(env.base_lin_vel[:, 2])
         xy_vel += torch.sum(torch.square(env.base_ang_vel[:, :2]), dim=1)
 
-        env.commands[:,0] = 1.2
+        env.commands[:,0] = 1.5
         env.commands[:,1] = 0
         env.commands[:,2] = 0
         env.commands[:,3] = 0

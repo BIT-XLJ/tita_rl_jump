@@ -41,7 +41,7 @@ class TitaConstraintRoughCfg( LeggedRobotCfg ):
         num_observations = n_proprio + n_scan + history_len*n_proprio + n_priv_latent
 
     class init_state( LeggedRobotCfg.init_state ):
-        pos = [0.0, 0.0, 0.4] # x,y,z [m]
+        pos = [0.0, 0.0, 0.45] # x,y,z [m]
         rot = [0, 0.0, 0.0, 1]  # x, y, z, w [quat]
         lin_vel = [0.0, 0.0, 0.0]  # x, y, z [m/s]
         ang_vel = [0.0, 0.0, 0.0]  # x, y, z [rad/s]       
@@ -103,19 +103,19 @@ class TitaConstraintRoughCfg( LeggedRobotCfg ):
   
     class rewards( LeggedRobotCfg.rewards ):
         soft_dof_pos_limit = 0.9
-        base_height_target = 0.4  #0.35
+        base_height_target = 0.45  #0.35
         cycle_time = 1.2
         class scales( LeggedRobotCfg.rewards.scales ):
             torques = 0.0
             powers = -2e-5
             termination = -200
-            tracking_lin_vel = 1.0
-            tracking_ang_vel = 0.8
+            tracking_lin_vel = 1.2
+            tracking_ang_vel = 0.5
             lin_vel_z = -0.0
             ang_vel_xy = -0.05
             dof_vel = 0.0
             dof_acc = -2.5e-7
-            base_height = -1.3        #-3.0
+            base_height = -1.2        #-1.3
             collision = -1.0
             feet_stumble = 0.0
             action_rate = -0.01
@@ -257,7 +257,7 @@ class TitaConstraintRoughCfgPPO( LeggedRobotCfgPPO ):
         policy_class_name = 'ActorCriticBarlowTwins'
         runner_class_name = 'OnConstraintPolicyRunner'
         algorithm_class_name = 'NP3O'
-        max_iterations = 3000
+        max_iterations = 4000
         num_steps_per_env = 24
         resume = True
         resume_path = 'tita_example_10000.pt'
