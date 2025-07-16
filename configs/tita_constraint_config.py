@@ -86,7 +86,7 @@ class TitaConstraintRoughCfg( LeggedRobotCfg ):
             lin_vel_x = [0.0, 1.0]  # min max [m/s]
             lin_vel_y = [-0.01, 0.01]  # min max [m/s]
             # lin_vel_z = [0.0, 1.0]  # min max [m/s]
-            ang_vel_yaw = [-0.01, 0.01]  # min max [rad/s]
+            ang_vel_yaw = [0.0, 0.0]  # min max [rad/s]
             heading = [-0.01, 0.01]
 
     class asset( LeggedRobotCfg.asset ):
@@ -104,25 +104,25 @@ class TitaConstraintRoughCfg( LeggedRobotCfg ):
     class rewards( LeggedRobotCfg.rewards ):
         soft_dof_pos_limit = 0.9
         base_height_target = 0.45  #0.35
-        cycle_time = 1.2
+        cycle_time = 1.2  # 没用上
         class scales( LeggedRobotCfg.rewards.scales ):
             torques = 0.0
             powers = -2e-5
             termination = -200
             tracking_lin_vel = 2.0
-            tracking_ang_vel = 2.0
+            tracking_ang_vel = 2.0    #主要调整这个
             lin_vel_z = -0.0
             ang_vel_xy = -0.05
             dof_vel = 0.0
             dof_acc = -2.5e-7
-            base_height = -1.2        #-1.3
+            base_height = -1.2        #主要调整这个
             collision = -1.0
             feet_stumble = 0.0
             action_rate = -0.01
             action_smoothness= 0
             stand_still = 0.0
             foot_clearance= -0.0
-            orientation=-3  # -1
+            orientation=-3            #主要调整这个
             tracking_goal_vel = 0.0   
             jump_height = 0.0         #鼓励跳跃,2.0
             tracking_yaw = 0.0         #10,1.0
@@ -131,12 +131,12 @@ class TitaConstraintRoughCfg( LeggedRobotCfg ):
             feet_contact_forces = 0.0     # 0.0
             #########################
             feet_air_time = 0.0
-            lin_vel_up = 5.0   
-            lin_vel_forward = 5.0     #5.0       
+            lin_vel_up = 5.0          #主要调整这个
+            lin_vel_forward = 5.0     #主要调整这个       
             lin_vel_z = 0.0
             joint_pos = 0.0  # 8.0
-            symmetric = 0.3
-            jump_orientation = 1.5
+            symmetric = 0.3           #主要调整这个
+            jump_orientation = 1.5    #主要调整这个
             # reach_goal = 200
 
 
