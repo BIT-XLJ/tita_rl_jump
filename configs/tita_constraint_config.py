@@ -83,7 +83,7 @@ class TitaConstraintRoughCfg( LeggedRobotCfg ):
         global_reference = False
 
         class ranges:
-            lin_vel_x = [1.0, 2.0]  # min max [m/s]
+            lin_vel_x = [0.0, 1.0]  # min max [m/s]
             lin_vel_y = [-0.01, 0.01]  # min max [m/s]
             # lin_vel_z = [0.0, 1.0]  # min max [m/s]
             ang_vel_yaw = [-0.01, 0.01]  # min max [rad/s]
@@ -109,8 +109,8 @@ class TitaConstraintRoughCfg( LeggedRobotCfg ):
             torques = 0.0
             powers = -2e-5
             termination = -200
-            tracking_lin_vel = 1.2
-            tracking_ang_vel = 0.5
+            tracking_lin_vel = 2.0
+            tracking_ang_vel = 2.0
             lin_vel_z = -0.0
             ang_vel_xy = -0.05
             dof_vel = 0.0
@@ -122,11 +122,11 @@ class TitaConstraintRoughCfg( LeggedRobotCfg ):
             action_smoothness= 0
             stand_still = 0.0
             foot_clearance= -0.0
-            orientation=-1.5  # -1
+            orientation=-3  # -1
             tracking_goal_vel = 0.0   
             jump_height = 0.0         #鼓励跳跃,2.0
             tracking_yaw = 0.0         #10,1.0
-            close_target = 400.0          # 0.0
+            close_target = 0.0          # 0.0
             jump = 0.0                   # 2.0
             feet_contact_forces = 0.0     # 0.0
             #########################
@@ -135,7 +135,7 @@ class TitaConstraintRoughCfg( LeggedRobotCfg ):
             lin_vel_forward = 5.0     #5.0       
             lin_vel_z = 0.0
             joint_pos = 0.0  # 8.0
-            symmetric = 0.1
+            symmetric = 0.3
             jump_orientation = 1.5
             # reach_goal = 200
 
